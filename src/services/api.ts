@@ -209,14 +209,43 @@ export const api = {
         list: async () => {
             const { data, error } = await supabase.from('schedule_events').select('*');
             if (error) throw error;
-            return data as ScheduleEvent[];
+            return (data || []).map(item => ({
+                id: item.id,
+                type: item.type,
+                title: item.title,
+                date: item.date,
+                durationMinutes: item.duration_minutes,
+                description: item.description,
+                responsible: item.responsible,
+                customerId: item.customer_id,
+                status: item.status
+            } as ScheduleEvent));
         },
         create: async (event: ScheduleEvent) => {
-            const { error } = await supabase.from('schedule_events').insert(event);
+            const { error } = await supabase.from('schedule_events').insert({
+                id: event.id,
+                type: event.type,
+                title: event.title,
+                date: event.date,
+                duration_minutes: event.durationMinutes,
+                description: event.description,
+                responsible: event.responsible,
+                customer_id: event.customerId,
+                status: event.status
+            });
             if (error) throw error;
         },
         update: async (event: ScheduleEvent) => {
-            const { error } = await supabase.from('schedule_events').update(event).eq('id', event.id);
+            const { error } = await supabase.from('schedule_events').update({
+                type: event.type,
+                title: event.title,
+                date: event.date,
+                duration_minutes: event.durationMinutes,
+                description: event.description,
+                responsible: event.responsible,
+                customer_id: event.customerId,
+                status: event.status
+            }).eq('id', event.id);
             if (error) throw error;
         },
         delete: async (id: string) => {

@@ -79,7 +79,7 @@ const SchedulingModule: React.FC<SchedulingModuleProps> = ({ events, setEvents, 
       }
     } catch (error) {
       console.error("Error creating event:", error);
-      alert("Erro ao criar agendamento.");
+      alert(`Erro ao criar agendamento: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
     }
   };
 
