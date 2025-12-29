@@ -4,16 +4,51 @@ import { Product, Customer, Quote, FixedAsset, FixedCost, ScheduleEvent, AppView
 export const api = {
     products: {
         list: async () => {
-            const { data, error } = await supabase.from('products').select('*');
+            const { data, error } = await supabase.from('products').select(`
+                id,
+                name,
+                category,
+                unitType:unit_type,
+                costPrice:cost_price,
+                productionTimeMinutes:production_time_minutes,
+                wastePercent:waste_percent,
+                salePrice:sale_price,
+                stock,
+                availableRollWidths:available_roll_widths
+            `);
             if (error) throw error;
             return data as Product[];
         },
         create: async (product: Product) => {
-            const { error } = await supabase.from('products').insert(product);
+            const dbProduct = {
+                id: product.id,
+                name: product.name,
+                category: product.category,
+                unit_type: product.unitType,
+                cost_price: product.costPrice,
+                production_time_minutes: product.productionTimeMinutes,
+                waste_percent: product.wastePercent,
+                sale_price: product.salePrice,
+                stock: product.stock,
+                available_roll_widths: product.availableRollWidths
+            };
+            const { error } = await supabase.from('products').insert(dbProduct);
             if (error) throw error;
         },
         update: async (product: Product) => {
-            const { error } = await supabase.from('products').update(product).eq('id', product.id);
+            const dbProduct = {
+                id: product.id,
+                name: product.name,
+                category: product.category,
+                unit_type: product.unitType,
+                cost_price: product.costPrice,
+                production_time_minutes: product.productionTimeMinutes,
+                waste_percent: product.wastePercent,
+                sale_price: product.salePrice,
+                stock: product.stock,
+                available_roll_widths: product.availableRollWidths
+            };
+            const { error } = await supabase.from('products').update(dbProduct).eq('id', product.id);
             if (error) throw error;
         },
         updateStock: async (id: string, quantityToRemove: number) => {
@@ -52,16 +87,54 @@ export const api = {
     },
     quotes: {
         list: async () => {
-            const { data, error } = await supabase.from('quotes').select('*');
+            const { data, error } = await supabase.from('quotes').select(`
+                id,
+                date,
+                customerId:customer_id,
+                items,
+                totalAmount:total_amount,
+                downPayment:down_payment,
+                designFee:design_fee,
+                installFee:install_fee,
+                status,
+                deadlineDays:deadline_days,
+                notes
+            `);
             if (error) throw error;
             return data as Quote[];
         },
         create: async (quote: Quote) => {
-            const { error } = await supabase.from('quotes').insert(quote);
+            const dbQuote = {
+                id: quote.id,
+                date: quote.date,
+                customer_id: quote.customerId,
+                items: quote.items,
+                total_amount: quote.totalAmount,
+                down_payment: quote.downPayment,
+                design_fee: quote.designFee,
+                install_fee: quote.installFee,
+                status: quote.status,
+                deadline_days: quote.deadlineDays,
+                notes: quote.notes
+            };
+            const { error } = await supabase.from('quotes').insert(dbQuote);
             if (error) throw error;
         },
         update: async (quote: Quote) => {
-            const { error } = await supabase.from('quotes').update(quote).eq('id', quote.id);
+            const dbQuote = {
+                id: quote.id,
+                date: quote.date,
+                customer_id: quote.customerId,
+                items: quote.items,
+                total_amount: quote.totalAmount,
+                down_payment: quote.downPayment,
+                design_fee: quote.designFee,
+                install_fee: quote.installFee,
+                status: quote.status,
+                deadline_days: quote.deadlineDays,
+                notes: quote.notes
+            };
+            const { error } = await supabase.from('quotes').update(dbQuote).eq('id', quote.id);
             if (error) throw error;
         },
         delete: async (id: string) => {
@@ -71,21 +144,47 @@ export const api = {
     },
     financial: {
         getConfig: async () => {
-            const { data, error } = await supabase.from('financial_config').select('*').single();
+            const { data, error } = await supabase.from('financial_config').select(`
+                id,
+                productiveHoursPerMonth:productive_hours_per_month,
+                taxPercent:tax_percent,
+                commissionPercent:commission_percent,
+                targetProfitMargin:target_profit_margin
+            `).single();
             if (error) return null;
             return data;
         },
         updateConfig: async (config: any) => {
-            const { error } = await supabase.from('financial_config').upsert({ id: 'default', ...config });
+            const dbConfig = {
+                id: 'default',
+                productive_hours_per_month: config.productiveHoursPerMonth,
+                tax_percent: config.taxPercent,
+                commission_percent: config.commissionPercent,
+                target_profit_margin: config.targetProfitMargin
+            };
+            const { error } = await supabase.from('financial_config').upsert(dbConfig);
             if (error) throw error;
         },
         listAssets: async () => {
-            const { data, error } = await supabase.from('fixed_assets').select('*');
+            const { data, error } = await supabase.from('fixed_assets').select(`
+                id,
+                name,
+                value,
+                usefulLifeYears:useful_life_years,
+                monthlyDepreciation:monthly_depreciation
+            `);
             if (error) throw error;
             return data as FixedAsset[];
         },
         saveAsset: async (asset: FixedAsset) => {
-            const { error } = await supabase.from('fixed_assets').upsert(asset);
+            const dbAsset = {
+                id: asset.id,
+                name: asset.name,
+                value: asset.value,
+                useful_life_years: asset.usefulLifeYears,
+                monthly_depreciation: asset.monthlyDepreciation
+            };
+            const { error } = await supabase.from('fixed_assets').upsert(dbAsset);
             if (error) throw error;
         },
         deleteAsset: async (id: string) => {
