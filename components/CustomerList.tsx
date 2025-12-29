@@ -57,9 +57,9 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, setCustomers, in
         setCustomers(prev => [...prev, newCustomer]);
       }
       setIsModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving customer:", error);
-      alert("Erro ao salvar cliente.");
+      alert(`Erro ao salvar cliente: ${error.message || JSON.stringify(error)}`);
     }
   };
 
