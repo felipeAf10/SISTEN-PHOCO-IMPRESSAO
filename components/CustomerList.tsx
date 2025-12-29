@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Edit2, Trash2, User, Phone, Mail, MapPin, X, Search } from 'lucide-react';
 import { Customer } from '../types';
+import { api } from '../src/services/api';
 
 interface CustomerListProps {
   customers: Customer[];
