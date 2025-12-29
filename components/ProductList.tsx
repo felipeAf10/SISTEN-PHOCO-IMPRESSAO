@@ -89,9 +89,9 @@ const ProductList: React.FC<ProductListProps> = ({ products, setProducts, costPe
         setProducts(prev => [...prev, newProduct]);
       }
       setIsModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving product:", error);
-      alert("Erro ao salvar produto. Verifique sua conexão.");
+      alert(`Erro ao salvar produto: ${error.message || JSON.stringify(error)}`);
     }
   };
 
