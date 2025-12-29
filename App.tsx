@@ -73,7 +73,9 @@ const App: React.FC = () => {
           console.warn("App.tsx: User not found in DB list.");
         }
       } else if (event === 'SIGNED_OUT') {
-        handleLogout();
+        // handleLogout(); // CAUTION: This creates an infinite loop if handleLogout calls signOut().
+        setUser(null);
+        setActiveView('dashboard');
       }
     });
 
@@ -123,7 +125,9 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    // This triggers onAuthStateChange('SIGNED_OUT')
     await supabase.auth.signOut();
+    // State clearing is handled by the listener or done here redundantly for safety
     setUser(null);
     localStorage.removeItem('phoco_user');
     setActiveView('dashboard');
