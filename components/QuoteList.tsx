@@ -62,6 +62,20 @@ const QuoteList: React.FC<QuoteListProps> = ({ quotes, setQuotes, customers, pro
     try {
       const quote = quotes.find(q => q.id === id);
       if (quote) {
+        // Se mudou para confirmado, dar baixa no estoque
+        if (newStatus === 'confirmed' && quote.status !== 'confirmed') {
+          const confirmData = confirm("Deseja dar baixa automática no estoque dos materiais deste orçamento?");
+          if (confirmData) {
+            for (const item of quote.items) {
+              const qtyToDeduct = item.quantity * (item.width && item.height ? (item.width * item.height) : 1);
+              // Simplificação: Deduz quantidade base ou m2 se for o caso. 
+              // Melhoria futura: lidar melhor com rolos vs unidades.
+              await api.products.updateStock(item.productId, item.quantity);
+            }
+            alert("Estoque atualizado com sucesso!");
+          }
+        }
+
         await api.quotes.update({ ...quote, status: newStatus });
         setQuotes(prev => prev.map(q => q.id === id ? { ...q, status: newStatus } : q));
       }

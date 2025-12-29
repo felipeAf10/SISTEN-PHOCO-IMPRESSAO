@@ -16,6 +16,16 @@ export const api = {
             const { error } = await supabase.from('products').update(product).eq('id', product.id);
             if (error) throw error;
         },
+        updateStock: async (id: string, quantityToRemove: number) => {
+            // First get current stock
+            const { data: product, error: fetchError } = await supabase.from('products').select('stock').eq('id', id).single();
+            if (fetchError) throw fetchError;
+
+            const newStock = (product?.stock || 0) - quantityToRemove;
+
+            const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', id);
+            if (error) throw error;
+        },
         delete: async (id: string) => {
             const { error } = await supabase.from('products').delete().eq('id', id);
             if (error) throw error;
@@ -128,6 +138,11 @@ export const api = {
         update: async (user: User) => {
             const { error } = await supabase.from('app_users').update(user).eq('id', user.id);
             if (error) throw error;
+        },
+        getByEmail: async (email: string) => {
+            const { data, error } = await supabase.from('app_users').select('*').eq('email', email).single();
+            if (error) return null;
+            return data as User;
         },
         delete: async (id: string) => {
             const { error } = await supabase.from('app_users').delete().eq('id', id);

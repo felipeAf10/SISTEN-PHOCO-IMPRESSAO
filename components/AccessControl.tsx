@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import {
   Shield, Check, X, Users, MessageSquare, ClipboardList, LayoutDashboard,
-  Calculator, Package, Plus, Trash2, Edit2, Lock, User as UserIcon, Save
+  Calculator, Package, Plus, Trash2, Edit2, Lock, User as UserIcon, Save,
+  Eye, EyeOff
 } from 'lucide-react';
 import { RolePermissions, UserRole, User } from '../types';
 import { api } from '../src/services/api';
@@ -17,6 +18,7 @@ interface AccessControlProps {
 const AccessControl: React.FC<AccessControlProps> = ({ permissions, setPermissions, users, setUsers }) => {
   const [activeTab, setActiveTab] = useState<'permissions' | 'users'>('users');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userForm, setUserForm] = useState({
     name: '',
@@ -60,6 +62,7 @@ const AccessControl: React.FC<AccessControlProps> = ({ permissions, setPermissio
       setEditingUser(null);
       setUserForm({ name: '', username: '', password: '', role: 'sales' });
     }
+    setShowPassword(false);
     setIsUserModalOpen(true);
   };
 
@@ -228,7 +231,21 @@ const AccessControl: React.FC<AccessControlProps> = ({ permissions, setPermissio
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input required type="password" value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-cyan shadow-inner" placeholder="••••••" />
+                    <input
+                      required
+                      type={showPassword ? "text" : "password"}
+                      value={userForm.password}
+                      onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                      className="w-full pl-11 pr-12 py-3 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-cyan shadow-inner"
+                      placeholder="••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-cyan transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
                 </div>
               </div>

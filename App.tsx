@@ -16,6 +16,7 @@ import SchedulingModule from './components/SchedulingModule';
 import Login from './components/Login';
 import AccessControl from './components/AccessControl';
 import { api } from './src/services/api';
+import { supabase } from './src/lib/supabase';
 
 const App: React.FC = () => {
   // State Initialization with empty arrays
@@ -48,6 +49,34 @@ const App: React.FC = () => {
 
   // Load Data from Supabase
   useEffect(() => {
+    // Check active session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user?.email) return;
+      // Fetch user details from app_users using email
+      api.users.list().then(uData => {
+        const foundUser = uData.find(u => u.email === session.user.email);
+        if (foundUser) handleLogin(foundUser);
+      });
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth State Change:", event, session?.user?.email);
+      if (event === 'SIGNED_IN' && session?.user?.email) {
+        console.log("App.tsx: Fetching users list for auto-login...");
+        const uData = await api.users.list();
+        console.log("App.tsx: Users fetched:", uData?.length);
+        const foundUser = uData.find(u => u.email === session.user.email);
+        if (foundUser) {
+          console.log("App.tsx: User found, logging in:", foundUser);
+          handleLogin(foundUser);
+        } else {
+          console.warn("App.tsx: User not found in DB list.");
+        }
+      } else if (event === 'SIGNED_OUT') {
+        handleLogout();
+      }
+    });
+
     const loadData = async () => {
       try {
         const [
@@ -82,16 +111,19 @@ const App: React.FC = () => {
     };
 
     loadData();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleLogin = (u: User) => {
     setUser(u);
-    localStorage.setItem('phoco_user', JSON.stringify(u));
+    // localStorage.setItem('phoco_user', JSON.stringify(u)); // No longer needed with Supabase Auth persistence usually, but keeping for compat if needed, though onAuthStateChange handles it.
     if (u.role === 'production') setActiveView('production');
     else setActiveView('dashboard');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem('phoco_user');
     setActiveView('dashboard');
@@ -137,7 +169,7 @@ const App: React.FC = () => {
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0F172A] text-white transform transition-transform duration-300 lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-8 h-full flex flex-col">
           <div className="flex items-center justify-center mb-10">
-            <img src="/logo-phoco.png" alt="Phoco Logo" className="h-24 w-auto object-contain drop-shadow-2xl" />
+            <img src="/logo-phoco.png" alt="Phoco Logo" className="h-24 w-24 object-cover rounded-full drop-shadow-2xl" />
           </div>
 
           <nav className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-2">

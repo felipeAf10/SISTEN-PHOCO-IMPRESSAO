@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { TrendingUp, Lock, User as UserIcon, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { supabase } from '../src/lib/supabase';
 import { User } from '../types';
 
 interface LoginProps {
@@ -9,27 +10,69 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Busca usuário na lista dinâmica
-    setTimeout(() => {
-      const foundUser = users.find(u => u.username === username && u.password === password);
-      
-      if (foundUser) {
-        onLogin(foundUser);
-      } else {
-        setError('Usuário ou senha incorretos. Verifique com o administrador.');
-        setIsLoading(false);
+    try {
+      console.log("Attempting Supabase Login...");
+      // Supabase Login
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (authError) {
+        console.error("Supabase Login Failed:", authError);
+        throw authError;
       }
-    }, 8000); // Um pouco mais de tempo para simular segurança
+
+      console.log("Supabase Login Success:", data.user?.email);
+
+      if (data.user && data.user.email) {
+        // Fetch SPECIFIC user to avoid loading all users (faster & safer)
+        console.log("Fetching user profile for:", data.user.email);
+        const { data: usersData, error: usersError } = await supabase
+          .from('app_users')
+          .select('*')
+          .eq('email', data.user.email); // Exact match filter
+
+        if (usersError) {
+          console.error("Error fetching app_users:", usersError);
+          throw new Error("Erro ao buscar dados do usuário.");
+        }
+
+        const foundUser = usersData && usersData.length > 0 ? usersData[0] : undefined;
+        console.log("Found User:", foundUser);
+
+        if (foundUser) {
+          onLogin(foundUser);
+        } else {
+          console.error("User authenticated but not found in DB.");
+          setError('Usuário autenticado, mas não encontrado no sistema. Contate o admin.');
+          await supabase.auth.signOut();
+        }
+      }
+    } catch (err: any) {
+      console.error("Auth error:", err);
+      // Show specific error messages
+      if (err.message === 'Invalid login credentials') {
+        setError('Email ou senha incorretos.');
+      } else if (err.message.includes('Email not confirmed')) {
+        setError('Email não confirmado. Verifique seu email ou confirme manualmente no Supabase (Authentication > Três pontos > Confirm User).');
+      } else {
+        setError(`Erro: ${err.message}`);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -48,7 +91,7 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
         </div>
 
         <div className="bg-white/5 backdrop-blur-2xl border border-white/10 p-10 rounded-[3rem] shadow-2xl shadow-black/40">
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleAuth} className="space-y-6">
             {error && (
               <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl flex items-center gap-3 text-rose-400 text-xs font-bold animate-shake">
                 <AlertCircle size={18} /> {error}
@@ -56,15 +99,15 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
             )}
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Usuário</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
               <div className="relative">
                 <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                <input 
-                  type="text" 
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white/10 transition-all"
-                  placeholder="Seu usuário..."
+                  placeholder="seu@email.com"
                   required
                 />
               </div>
@@ -74,8 +117,8 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white/10 transition-all"
@@ -85,15 +128,15 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
               </div>
             </div>
 
-            <button 
+            <button
               disabled={isLoading}
-              type="submit" 
+              type="submit"
               className="w-full py-5 bg-gradient-to-br from-indigo-500 to-indigo-700 hover:from-indigo-400 hover:to-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {isLoading ? <Loader2 size={18} className="animate-spin" /> : <><ArrowRight size={18} /> Entrar no Sistema</>}
             </button>
           </form>
-          
+
           <div className="mt-8 pt-8 border-t border-white/5 text-center">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">PriceFlow Engine v2.5</p>
           </div>

@@ -16,7 +16,8 @@ export interface RolePermissions {
 export interface User {
   id: string;
   username: string;
-  password?: string; // Campo para autenticação
+  email?: string; // Link to Supabase Auth
+  password?: string; // Mantido para compatibilidade, mas o Auth gerenciara a senha real
   role: UserRole;
   name: string;
 }
@@ -27,11 +28,11 @@ export interface Product {
   category: string;
   unitType: UnitType;
   costPrice: number;
-  productionTimeMinutes?: number; 
+  productionTimeMinutes?: number;
   wastePercent: number;
   salePrice: number;
   stock: number;
-  availableRollWidths?: number[]; 
+  availableRollWidths?: number[];
 }
 
 export interface FixedAsset {
@@ -86,7 +87,7 @@ export interface Quote {
   customerId: string;
   items: QuoteItem[];
   totalAmount: number;
-  downPayment: number; 
+  downPayment: number;
   designFee: number;
   installFee: number;
   status: QuoteStatus;
@@ -100,7 +101,7 @@ export interface ScheduleEvent {
   id: string;
   type: ScheduleEventType;
   title: string;
-  date: string; 
+  date: string;
   durationMinutes: number;
   customerId?: string;
   description: string;
