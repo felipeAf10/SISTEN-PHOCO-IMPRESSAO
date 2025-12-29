@@ -22,6 +22,35 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
     setError('');
 
     try {
+      if (mode === 'signup') {
+        console.log("Attempting Sign Up for:", email);
+
+        // 1. Check if email is authorized (exists in app_users)
+        const { data: usersData, error: usersError } = await supabase
+          .from('app_users')
+          .select('*')
+          .eq('email', email);
+
+        if (usersError || !usersData || usersData.length === 0) {
+          throw new Error('Este email não foi autorizado pelo administrador. Peça para ele te cadastrar na Equipe primeiro.');
+        }
+
+        // 2. Create Auth User
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (signUpError) throw signUpError;
+
+        console.log("Sign Up Success:", signUpData);
+        setError('Conta criada com sucesso! Você já pode entrar.');
+        setMode('signin'); // Switch back to login
+        setIsLoading(false);
+        return;
+      }
+
+      // LOGIN MODE
       console.log("Attempting Supabase Login...");
       // Supabase Login
       const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -91,15 +120,32 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
         </div>
 
         <div className="bg-white/5 backdrop-blur-2xl border border-white/10 p-10 rounded-[3rem] shadow-2xl shadow-black/40">
+          <div className="flex justify-center mb-6 bg-white/5 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => { setMode('signin'); setError(''); }}
+              className={`flex-1 py-2 px-4 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${mode === 'signin' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setError(''); }}
+              className={`flex-1 py-2 px-4 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${mode === 'signup' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+            >
+              Primeiro Acesso
+            </button>
+          </div>
+
           <form onSubmit={handleAuth} className="space-y-6">
             {error && (
-              <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl flex items-center gap-3 text-rose-400 text-xs font-bold animate-shake">
+              <div className={`p-4 rounded-2xl flex items-center gap-3 text-xs font-bold animate-shake ${error.includes('sucesso') ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'}`}>
                 <AlertCircle size={18} /> {error}
               </div>
             )}
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Corporativo</label>
               <div className="relative">
                 <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                 <input
@@ -107,14 +153,14 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white/10 transition-all"
-                  placeholder="seu@email.com"
+                  placeholder="seu.nome@empresa.com"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{mode === 'signup' ? 'Crie sua Senha' : 'Sua Senha'}</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                 <input
@@ -124,6 +170,7 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
                   className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white/10 transition-all"
                   placeholder="••••••••"
                   required
+                  minLength={6}
                 />
               </div>
             </div>
@@ -133,7 +180,7 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
               type="submit"
               className="w-full py-5 bg-gradient-to-br from-indigo-500 to-indigo-700 hover:from-indigo-400 hover:to-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              {isLoading ? <Loader2 size={18} className="animate-spin" /> : <><ArrowRight size={18} /> Entrar no Sistema</>}
+              {isLoading ? <Loader2 size={18} className="animate-spin" /> : <><ArrowRight size={18} /> {mode === 'signup' ? 'Criar Acesso' : 'Entrar no Sistema'}</>}
             </button>
           </form>
 
