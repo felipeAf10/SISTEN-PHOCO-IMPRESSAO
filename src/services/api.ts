@@ -1,23 +1,39 @@
 import { supabase } from '../lib/supabase';
-import { Product, Customer, Quote, FixedAsset, FixedCost, ScheduleEvent, AppView, User } from '../../types';
+import { Product, Customer, Quote, FixedAsset, FixedCost, ScheduleEvent, AppView, User, TimeRecord } from '../../types';
 
 export const api = {
     products: {
         list: async () => {
-            const { data, error } = await supabase.from('products').select(`
-                id,
-                name,
-                category,
-                unitType:unit_type,
-                costPrice:cost_price,
-                productionTimeMinutes:production_time_minutes,
-                wastePercent:waste_percent,
-                salePrice:sale_price,
-                stock,
-                availableRollWidths:available_roll_widths
-            `);
+            const { data, error } = await supabase.from('products').select('*');
             if (error) throw error;
-            return data as Product[];
+            console.log("API RAW PRODUCTS EXCERPT:", data ? data.slice(0, 3) : "No data");
+
+            const parsePrice = (val: string | number) => {
+                if (typeof val === 'number') return val;
+                if (typeof val === 'string') {
+                    // Try parsing "90.09"
+                    const dotParsed = parseFloat(val);
+                    if (!isNaN(dotParsed) && val.includes('.')) return dotParsed;
+
+                    // Try parsing "90,09" -> replace comma with dot
+                    const commaParsed = parseFloat(val.replace(',', '.'));
+                    return isNaN(commaParsed) ? 0 : commaParsed;
+                }
+                return 0;
+            };
+
+            return data.map((p: any) => ({
+                id: p.id,
+                name: p.name || 'Unnamed Product',
+                category: p.category,
+                unitType: p.unit_type,
+                costPrice: parsePrice(p.cost_price),
+                productionTimeMinutes: Number(p.production_time_minutes),
+                wastePercent: Number(p.waste_percent),
+                salePrice: parsePrice(p.sale_price),
+                stock: Number(p.stock),
+                availableRollWidths: p.available_roll_widths
+            })) as Product[];
         },
         create: async (product: Product) => {
             const dbProduct = {
@@ -257,24 +273,194 @@ export const api = {
         list: async () => {
             const { data, error } = await supabase.from('app_users').select('*');
             if (error) throw error;
-            return data as User[];
+            return data.map((u: any) => ({
+                ...u,
+                workloadHours: u.workload_hours,
+                workloadConfig: u.workload_config
+            })) as User[];
         },
         create: async (user: User) => {
-            const { error } = await supabase.from('app_users').insert(user);
+            const dbUser = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                workload_hours: user.workloadHours,
+                workload_config: user.workloadConfig,
+                active: user.active,
+                avatar: user.avatar
+            };
+            const { error } = await supabase.from('app_users').insert(dbUser);
             if (error) throw error;
         },
-        update: async (user: User) => {
-            const { error } = await supabase.from('app_users').update(user).eq('id', user.id);
+        update: async (userId: string, updates: Partial<User>) => {
+            const dbUpdates: any = {};
+            if (updates.name !== undefined) dbUpdates.name = updates.name;
+            if (updates.email !== undefined) dbUpdates.email = updates.email;
+            if (updates.role !== undefined) dbUpdates.role = updates.role;
+            if (updates.workloadHours !== undefined) dbUpdates.workload_hours = updates.workloadHours;
+            if (updates.workloadConfig !== undefined) dbUpdates.workload_config = updates.workloadConfig;
+            if (updates.active !== undefined) dbUpdates.active = updates.active;
+            if (updates.avatar !== undefined) dbUpdates.avatar = updates.avatar;
+
+            const { error } = await supabase.from('app_users').update(dbUpdates).eq('id', userId);
             if (error) throw error;
         },
         getByEmail: async (email: string) => {
             const { data, error } = await supabase.from('app_users').select('*').eq('email', email).single();
             if (error) return null;
-            return data as User;
+            return {
+                ...data,
+                workloadHours: data.workload_hours,
+                workloadConfig: data.workload_config
+            } as User;
         },
         delete: async (id: string) => {
             const { error } = await supabase.from('app_users').delete().eq('id', id);
             if (error) throw error;
+        }
+    },
+    timeRecords: {
+        getToday: async (userId: string) => {
+            const today = new Date().toISOString().split('T')[0];
+            const { data, error } = await supabase.from('time_records')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('date', today)
+                .single();
+            if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "not found"
+            return data ? {
+                id: data.id,
+                userId: data.user_id,
+                date: data.date,
+                clockIn: data.clock_in,
+                lunchStart: data.lunch_start,
+                lunchEnd: data.lunch_end,
+                breakStart: data.break_start,
+                breakEnd: data.break_end,
+                clockOut: data.clock_out,
+                totalMinutes: data.total_minutes,
+                balanceMinutes: data.balance_minutes
+            } as TimeRecord : null;
+        },
+        createToday: async (userId: string) => {
+            const today = new Date().toISOString().split('T')[0];
+            const { data, error } = await supabase.from('time_records').insert({
+                user_id: userId,
+                date: today
+            }).select().single();
+            if (error) throw error;
+            return {
+                id: data.id,
+                userId: data.user_id,
+                date: data.date
+            } as TimeRecord;
+        },
+        update: async (record: TimeRecord) => {
+            const dbRecord = {
+                clock_in: record.clockIn,
+                lunch_start: record.lunchStart,
+                lunch_end: record.lunchEnd,
+                break_start: record.breakStart,
+                break_end: record.breakEnd,
+                clock_out: record.clockOut,
+                total_minutes: record.totalMinutes,
+                balance_minutes: record.balanceMinutes
+            };
+            const { error } = await supabase.from('time_records').update(dbRecord).eq('id', record.id);
+            if (error) throw error;
+        },
+        getHistory: async (userId: string) => {
+            const { data, error } = await supabase.from('time_records')
+                .select('*')
+                .eq('user_id', userId)
+                .order('date', { ascending: false })
+                .limit(30);
+            if (error) throw error;
+            return data.map(d => ({
+                id: d.id,
+                userId: d.user_id,
+                date: d.date,
+                clockIn: d.clock_in,
+                lunchStart: d.lunch_start,
+                lunchEnd: d.lunch_end,
+                breakStart: d.break_start,
+                breakEnd: d.break_end,
+                clockOut: d.clock_out,
+                totalMinutes: d.total_minutes,
+                balanceMinutes: d.balance_minutes
+            })) as TimeRecord[];
+        },
+        // Admin: Get records for all users (filtered by date range)
+        getAll: async (startDate: string, endDate: string) => {
+            const { data, error } = await supabase.from('time_records')
+                .select(`
+                    *,
+                    app_users (name, email, role, workload_hours, workload_config)
+                 `)
+                .gte('date', startDate)
+                .lte('date', endDate)
+                .order('date', { ascending: false });
+
+            if (error) throw error;
+
+            return data.map((d: any) => ({
+                id: d.id,
+                userId: d.user_id,
+                // Flatten user info for easier display
+                userName: d.app_users?.name || 'Unknown',
+                userRole: d.app_users?.role,
+                userWorkload: d.app_users?.workload_hours,
+                userConfig: d.app_users?.workload_config,
+
+                date: d.date,
+                clockIn: d.clock_in,
+                lunchStart: d.lunch_start,
+                lunchEnd: d.lunch_end,
+                breakStart: d.break_start,
+                breakEnd: d.break_end,
+                clockOut: d.clock_out,
+                totalMinutes: d.total_minutes,
+                balanceMinutes: d.balance_minutes
+            }));
+        },
+        // Admin: Update any record
+        updateAdmin: async (record: any) => {
+            const { error } = await supabase.from('time_records').update({
+                clock_in: record.clockIn,
+                lunch_start: record.lunchStart,
+                lunch_end: record.lunchEnd,
+                break_start: record.breakStart,
+                break_end: record.breakEnd,
+                clock_out: record.clockOut,
+                total_minutes: record.totalMinutes,
+                balance_minutes: record.balanceMinutes
+            }).eq('id', record.id);
+            if (error) throw error;
+        }
+    },
+    permissions: {
+        getAll: async () => {
+            const { data, error } = await supabase.from('permission_settings').select('*');
+            if (error) throw error;
+            return data;
+        },
+        update: async (role: string, permissions: any) => {
+            const { error } = await supabase.from('permission_settings').upsert({
+                role,
+                permissions,
+                updated_at: new Date().toISOString()
+            });
+            if (error) throw error;
+        }
+    },
+    storage: {
+        uploadProof: async (path: string, file: File) => {
+            return await supabase.storage.from('production-proofs').upload(path, file);
+        },
+        getPublicUrl: (path: string) => {
+            const { data } = supabase.storage.from('production-proofs').getPublicUrl(path);
+            return data.publicUrl;
         }
     }
 };

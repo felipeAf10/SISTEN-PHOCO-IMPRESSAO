@@ -137,29 +137,29 @@ const ProductList: React.FC<ProductListProps> = ({ products, setProducts, costPe
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Materiais <span className="text-brand-magenta">&</span> Estoque</h2>
-          <p className="text-slate-500 text-sm mt-1">Gerencie seus custos e margens de lucro.</p>
+          <h2 className="text-3xl font-black text-slate-50 tracking-tight uppercase neon-text">Materiais <span className="text-fuchsia-400">&</span> Estoque</h2>
+          <p className="text-slate-400 text-sm mt-1">Gerencie seus custos e margens de lucro.</p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input
               type="text"
               placeholder="Buscar material..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-cyan shadow-sm outline-none"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/50 shadow-sm outline-none text-slate-100 placeholder-slate-500"
             />
           </div>
-          <button onClick={() => handleOpenModal()} className="bg-brand-magenta hover:bg-pink-600 text-white px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 shadow-lg shadow-pink-500/25 transition-all active:scale-95 whitespace-nowrap">
+          <button onClick={() => handleOpenModal()} className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(217,70,239,0.4)] transition-all active:scale-95 whitespace-nowrap border border-fuchsia-500/20">
             <Plus size={20} /> Novo Material
           </button>
         </div>
       </div>
 
-      <div className="glass-card bg-white/70 rounded-[2.5rem] overflow-hidden shadow-lg border border-white/50">
+      <div className="glass-card rounded-[2.5rem] overflow-hidden shadow-lg border border-white/5">
         <table className="w-full text-left">
-          <thead className="bg-slate-50/50 border-b border-slate-100">
+          <thead className="bg-slate-900/50 border-b border-white/5">
             <tr>
               <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Material</th>
               <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Custo Material</th>
@@ -168,34 +168,34 @@ const ProductList: React.FC<ProductListProps> = ({ products, setProducts, costPe
               <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100/50">
+          <tbody className="divide-y divide-slate-800/50">
             {filteredProducts.map(p => (
-              <tr key={p.id} className="hover:bg-white/60 transition-colors group">
+              <tr key={p.id} className="hover:bg-white/5 transition-colors group">
                 <td className="px-6 py-5">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-cyan-50 text-brand-cyan rounded-xl flex items-center justify-center font-bold uppercase shadow-sm">{p.name.charAt(0)}</div>
+                    <div className="w-10 h-10 bg-slate-800 border border-white/10 text-cyan-400 rounded-xl flex items-center justify-center font-bold uppercase shadow-sm">{p.name.charAt(0)}</div>
                     <div>
-                      <p className="font-black text-slate-800">{p.name}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">{p.category} | {p.unitType}</p>
+                      <p className="font-black text-slate-200 group-hover:text-white transition-colors">{p.name}</p>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase">{p.category} | {p.unitType}</p>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-5 font-bold text-slate-600">R$ {p.costPrice.toFixed(2)}</td>
+                <td className="px-6 py-5 font-bold text-slate-300">R$ {p.costPrice.toFixed(2)}</td>
                 <td className="px-6 py-5">
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-500 flex items-center gap-1"><Clock size={12} /> {p.productionTimeMinutes}min</span>
+                    <span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Clock size={12} /> {p.productionTimeMinutes}min</span>
                     <span className="text-[10px] font-bold text-rose-400 uppercase">+{p.wastePercent}% Perda</span>
                   </div>
                 </td>
                 <td className="px-6 py-5 text-right">
-                  <span className="font-black text-brand-magenta text-lg">R$ {p.salePrice.toFixed(2)}</span>
+                  <span className="font-black text-fuchsia-400 text-lg neon-text">R$ {p.salePrice.toFixed(2)}</span>
                 </td>
                 <td className="px-6 py-5 text-right">
                   <div className="flex justify-end gap-2 group-hover:opacity-100 lg:opacity-0 transition-opacity">
-                    <button onClick={() => handleOpenModal(p)} title="Editar" className="p-2 text-slate-400 hover:text-indigo-600 bg-slate-100 lg:bg-transparent rounded-lg">
+                    <button onClick={() => handleOpenModal(p)} title="Editar" className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-all">
                       <Edit2 size={16} />
                     </button>
-                    <button onClick={() => setProducts(products.filter(item => item.id !== p.id))} title="Excluir" className="p-2 text-slate-400 hover:text-rose-600 bg-slate-100 lg:bg-transparent rounded-lg">
+                    <button onClick={() => setProducts(products.filter(item => item.id !== p.id))} title="Excluir" className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-800 rounded-lg transition-all">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -204,7 +204,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, setProducts, costPe
             ))}
             {filteredProducts.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-20 text-center text-slate-400 uppercase font-black text-xs tracking-widest">
+                <td colSpan={5} className="px-6 py-20 text-center text-slate-500 uppercase font-black text-xs tracking-widest">
                   Nenhum material encontrado para "{searchTerm}"
                 </td>
               </tr>

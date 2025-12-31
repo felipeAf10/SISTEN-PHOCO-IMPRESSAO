@@ -1,10 +1,19 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Customer, QuoteItem } from "../types";
 
-// Initialize the API with the key
-const genAI = new GoogleGenerativeAI(process.env.API_KEY || '');
+// Initialize the API lazily
+const getGenAI = () => {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+  if (!apiKey) {
+    console.warn("Gemini API Key is missing");
+    return null;
+  }
+  return new GoogleGenerativeAI(apiKey);
+};
 
 export const getVehicleMeasurements = async (make: string, model: string, year: string): Promise<any> => {
+  const genAI = getGenAI();
+  if (!genAI) return null;
   const genModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const prompt = `Aja como um orçamentista técnico de uma oficina de envelopamento. 
@@ -44,12 +53,33 @@ export const generateSalesPitch = async (
   deadlineDays: number,
   salespersonName: string
 ): Promise<string> => {
-  const genModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const genAI = getGenAI();
+  const genModel = genAI ? genAI.getGenerativeModel({ model: "gemini-2.5-flash" }) : null;
+
+  if (!genModel) {
+    return generateSalesPitchFallback(customer, items, total, designFee, installFee, deadlineDays, salespersonName);
+  }
 
   const itemsList = items.map(i => {
     let details = i.width && i.height && i.height !== 1 ? ` [${i.width}x${i.height}m]` : '';
+
     if (i.labelData) {
-      details = ` (${i.labelData.totalLabels} etiquetas de ${i.labelData.w}x${i.labelData.h}cm)`;
+      if (typeof i.labelData.totalLabels === 'number' || i.labelData.type === 'sticker') {
+        // Sticker Format
+        const w = i.labelData.w || i.labelData.singleWidth || 0;
+        const h = i.labelData.h || i.labelData.singleHeight || 0;
+        details = ` (${i.labelData.totalLabels || i.quantity} etiquetas de ${w}x${h}cm)`;
+      } else if (i.labelData.type === 'laser') {
+        // Laser Format
+        if (i.labelData.mode === 'promotional') {
+          details = ` [Brinde: ${i.labelData.promoProduct}]`;
+        } else {
+          details = ` [Material: ${i.labelData.material} ${i.labelData.thickness}]`;
+        }
+      } else if (i.labelData.type === 'automotive') {
+        // Automotive Format
+        details = ` [Veículo: ${i.labelData.vehicle}]`;
+      }
     } else if (i.width && (!i.height || i.height === 1)) {
       details = ` [Área Total: ${i.width.toFixed(2)}m²]`;
     }
@@ -60,7 +90,7 @@ export const generateSalesPitch = async (
         reqText += `\n   🚗 _Veículo:_ ${i.requirements.auto_vehicle}`;
       }
       if (i.requirements.auto_breakdown) {
-        reqText += `\n   _Peças inclusas:_ ${i.requirements.auto_breakdown}`;
+        reqText += `\n   _Peças:_ ${i.requirements.auto_breakdown}`;
       }
     }
 
@@ -90,6 +120,50 @@ export const generateSalesPitch = async (
     return response.text() || "Erro ao gerar texto.";
   } catch (error) {
     console.error("Erro GeminiService:", error);
-    return "Erro na comunicação com a IA.";
+    return generateSalesPitchFallback(customer, items, total, designFee, installFee, deadlineDays, salespersonName);
   }
+};
+
+export const generateSalesPitchFallback = (
+  customer: Customer,
+  items: (QuoteItem & { productName: string, labelData?: any, requirements?: Record<string, any> })[],
+  total: number,
+  designFee: number,
+  installFee: number,
+  deadlineDays: number,
+  salespersonName: string
+): string => {
+  const itemsList = items.map(i => {
+    let details = i.width && i.height && i.height !== 1 ? ` [${i.width}x${i.height}m]` : '';
+
+    if (i.labelData) {
+      if (typeof i.labelData.totalLabels === 'number' || i.labelData.type === 'sticker') {
+        const w = i.labelData.w || i.labelData.singleWidth || 0;
+        const h = i.labelData.h || i.labelData.singleHeight || 0;
+        details = ` (${i.labelData.totalLabels || i.quantity} etiquetas de ${w}x${h}cm)`;
+      } else if (i.labelData.type === 'laser') {
+        if (i.labelData.mode === 'promotional') {
+          details = ` [Brinde: ${i.labelData.promoProduct}]`;
+        } else {
+          details = ` [Material: ${i.labelData.material} ${i.labelData.thickness}]`;
+        }
+      } else if (i.labelData.type === 'automotive') {
+        details = ` [Veículo: ${i.labelData.vehicle}]`;
+      }
+    } else if (i.width && (!i.height || i.height === 1)) {
+      details = ` [Área Total: ${i.width.toFixed(2)}m²]`;
+    }
+
+    let reqText = '';
+    if (i.requirements) {
+      if (i.requirements.auto_vehicle) reqText += `\n   🚗 Veículo: ${i.requirements.auto_vehicle}`;
+      if (i.requirements.auto_breakdown) reqText += `\n   Peças: ${i.requirements.auto_breakdown}`;
+    }
+
+    return `✅ *${i.productName}${details}*\n   Qtd: ${i.quantity} | Sub: *R$ ${i.subtotal.toFixed(2)}*${reqText}`;
+  }).join('\n\n');
+
+  const downPayment = total / 2;
+
+  return `Olá *${customer.name}*, tudo bem?\nAqui é *${salespersonName}* da PHOCO Impressão Digital.\n\nSegue o detalhamento do seu orçamento:\n\n${itemsList}\n\n💰 *INVESTIMENTO TOTAL: R$ ${total.toFixed(2)}*\n\n*Condições de Pagamento:*\n- 💳 Sinal de 50% (R$ ${downPayment.toFixed(2)}) para início.\n- 🗓️ Prazo de produção: ${deadlineDays} dias úteis.\n\nFico à disposição para qualquer dúvida!\n\n*${salespersonName}*\nDesign Phoco`;
 };

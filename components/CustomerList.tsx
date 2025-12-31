@@ -80,23 +80,23 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, setCustomers, in
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tight">Gestão de <span className="text-brand-magenta">Clientes</span></h2>
-          <p className="text-slate-500 text-sm">Gerencie seu cadastro de contatos.</p>
+          <h2 className="text-3xl font-black text-slate-50 uppercase tracking-tight neon-text">Gestão de <span className="text-cyan-400">Clientes</span></h2>
+          <p className="text-slate-400 text-sm">Gerencie seu cadastro de contatos.</p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input
               type="text"
               placeholder="Buscar cliente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-cyan shadow-sm outline-none"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/50 shadow-sm outline-none text-slate-100 placeholder-slate-500"
             />
           </div>
           <button
             onClick={() => handleOpenModal()}
-            className="bg-brand-cyan hover:bg-cyan-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-cyan-500/25 transition-all active:scale-95 whitespace-nowrap"
+            className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all active:scale-95 whitespace-nowrap border border-cyan-500/20"
           >
             <Plus size={18} />
             Novo Cliente
@@ -106,55 +106,55 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, setCustomers, in
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCustomers.map((customer) => (
-          <div key={customer.id} className="glass-card bg-white/70 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group border border-white/50">
+          <div key={customer.id} className="glass-card p-6 rounded-[2rem] shadow-sm hover:shadow-[0_0_20px_rgba(6,182,212,0.1)] hover:-translate-y-1 transition-all group border border-white/5">
             <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center font-black text-xl uppercase shadow-inner">
+              <div className="w-12 h-12 bg-slate-800/50 text-cyan-400 border border-white/5 rounded-2xl flex items-center justify-center font-black text-xl uppercase shadow-inner">
                 {customer.name.charAt(0)}
               </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => handleOpenModal(customer)}
-                  className="p-2 text-slate-400 hover:text-brand-cyan hover:bg-cyan-50 rounded-lg transition-colors"
+                  className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"
                 >
                   <Edit2 size={16} />
                 </button>
                 <button
                   onClick={() => handleDelete(customer.id)}
-                  className="p-2 text-slate-400 hover:text-brand-magenta hover:bg-pink-50 rounded-lg transition-colors"
+                  className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-800 rounded-lg transition-colors"
                 >
                   <Trash2 size={16} />
                 </button>
               </div>
             </div>
-            <h3 className="font-black text-slate-800 text-lg mb-4 uppercase truncate">{customer.name}</h3>
+            <h3 className="font-black text-slate-200 text-lg mb-4 uppercase truncate group-hover:text-white transition-colors">{customer.name}</h3>
 
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-sm text-slate-500">
-                <Phone size={16} className="text-slate-400" />
+                <Phone size={16} className="text-slate-600" />
                 <span className="font-bold">{customer.phone}</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-500">
-                <Mail size={16} className="text-slate-400" />
+                <Mail size={16} className="text-slate-600" />
                 <span className="truncate font-medium">{customer.email}</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-500">
-                <MapPin size={16} className="text-slate-400" />
+                <MapPin size={16} className="text-slate-600" />
                 <span className="truncate font-medium">{customer.address}</span>
               </div>
             </div>
 
             <button
-              className="w-full mt-6 py-3 border border-slate-200/60 bg-white/50 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white hover:text-brand-cyan transition-all shadow-sm"
+              className="w-full mt-6 py-3 border border-slate-700 bg-slate-800/50 text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-800 hover:text-cyan-400 hover:border-cyan-500/30 transition-all shadow-sm"
             >
               Histórico de Compras
             </button>
           </div>
         ))}
         {filteredCustomers.length === 0 && (
-          <div className="col-span-full p-20 text-center bg-white/50 glass-card rounded-[2rem] border border-dashed border-slate-300">
-            <User size={48} className="mx-auto text-slate-300 mb-4" />
-            <h4 className="text-slate-800 font-black uppercase text-sm tracking-tight">Nenhum cliente encontrado</h4>
-            <p className="text-slate-400 text-xs font-bold uppercase mt-1">Refine sua busca ou cadastre um novo contato.</p>
+          <div className="col-span-full p-20 text-center bg-slate-800/30 glass-card rounded-[2rem] border border-dashed border-slate-700">
+            <User size={48} className="mx-auto text-slate-600 mb-4" />
+            <h4 className="text-slate-300 font-black uppercase text-sm tracking-tight">Nenhum cliente encontrado</h4>
+            <p className="text-slate-500 text-xs font-bold uppercase mt-1">Refine sua busca ou cadastre um novo contato.</p>
           </div>
         )}
       </div>

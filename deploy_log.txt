@@ -1,0 +1,12 @@
+STARTING DEPLOY 29/12/2025 21:19:29,60
+
+Vercel CLI 50.1.3
+Loading scopes…
+Searching for existing projects…
+Auto-detected Project Settings (Vite):
+- Build Command: vite build
+- Development Command: vite --port $PORT
+- Install Command: `yarn install`, `pnpm install`, `npm install`, or `bun install`
+- Output Directory: dist
+Error: Project names can be up to 100 characters long and must be lowercase. They can include letters, digits, and the following characters: '.', '_', '-'. However, they cannot contain the sequence '---'. (400)
+Learn More: https://vercel.com/docs/projects/overview#project-name

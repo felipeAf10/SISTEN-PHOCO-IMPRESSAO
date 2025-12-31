@@ -4,3 +4,6 @@ dist
 build
 .DS_Store
 .vscode
+
+.vercel
+.env*.local

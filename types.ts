@@ -11,6 +11,7 @@ export interface RolePermissions {
   products: boolean;
   financial: boolean;
   customers: boolean;
+  time_clock: boolean;
 }
 
 export interface User {
@@ -20,6 +21,14 @@ export interface User {
   password?: string; // Mantido para compatibilidade, mas o Auth gerenciara a senha real
   role: UserRole;
   name: string;
+  avatar?: string;
+  active: boolean;
+  workloadHours?: number; // kept for legacy/fallback
+  workloadConfig?: {
+    default: number; // minutes
+    saturday?: number; // minutes
+    sunday?: number; // minutes
+  };
 }
 
 export interface Product {
@@ -79,7 +88,7 @@ export interface QuoteItem {
   requirements?: Record<string, string | boolean | number>;
 }
 
-export type QuoteStatus = 'draft' | 'sent' | 'negotiating' | 'confirmed' | 'production' | 'finished' | 'delivered';
+export type QuoteStatus = 'draft' | 'sent' | 'negotiating' | 'confirmed' | 'pre_print' | 'production' | 'printing_cut_electronic' | 'printing_cut_manual' | 'printing_lamination' | 'printing_finishing' | 'finished' | 'delivered';
 
 export interface Quote {
   id: string;
@@ -109,4 +118,19 @@ export interface ScheduleEvent {
   status: 'pending' | 'completed' | 'cancelled';
 }
 
-export type AppView = 'dashboard' | 'products' | 'customers' | 'quotes' | 'production' | 'financial' | 'new-quote' | 'scheduling' | 'access-control';
+export interface TimeRecord {
+  id: string;
+  userId: string;
+  date: string;
+  clockIn?: string;
+  lunchStart?: string;
+  lunchEnd?: string;
+  breakStart?: string;
+  breakEnd?: string;
+  clockOut?: string;
+  totalMinutes?: number;
+  balanceMinutes?: number;
+}
+
+
+export type AppView = 'dashboard' | 'products' | 'customers' | 'quotes' | 'production' | 'financial' | 'new-quote' | 'scheduling' | 'access-control' | 'time-clock' | 'hours-management';

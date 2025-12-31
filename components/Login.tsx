@@ -63,32 +63,9 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
         throw authError;
       }
 
-      console.log("Supabase Login Success:", data.user?.email);
+      console.log("Supabase Login Success:", data.user?.user_metadata);
+      // No need to fetch user here; App.tsx listener will handle it.
 
-      if (data.user && data.user.email) {
-        // Fetch SPECIFIC user to avoid loading all users (faster & safer)
-        console.log("Fetching user profile for:", data.user.email);
-        const { data: usersData, error: usersError } = await supabase
-          .from('app_users')
-          .select('*')
-          .eq('email', data.user.email); // Exact match filter
-
-        if (usersError) {
-          console.error("Error fetching app_users:", usersError);
-          throw new Error("Erro ao buscar dados do usuário.");
-        }
-
-        const foundUser = usersData && usersData.length > 0 ? usersData[0] : undefined;
-        console.log("Found User:", foundUser);
-
-        if (foundUser) {
-          onLogin(foundUser);
-        } else {
-          console.error("User authenticated but not found in DB.");
-          setError('Usuário autenticado, mas não encontrado no sistema. Contate o admin.');
-          await supabase.auth.signOut();
-        }
-      }
     } catch (err: any) {
       console.error("Auth error:", err);
       // Show specific error messages
@@ -99,10 +76,10 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
       } else {
         setError(`Erro: ${err.message}`);
       }
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Only stop loading on error. On success, App.tsx will take over.
     }
   };
+
 
   return (
     <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-6 relative overflow-hidden">
@@ -188,6 +165,10 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">PriceFlow Engine v2.5</p>
           </div>
         </div>
+
+        <p className="text-center text-slate-400 text-xs mt-8 font-medium">
+          &copy; 2024 Phoco Admin • v2.0 (Fixes Applied)
+        </p>
       </div>
     </div>
   );

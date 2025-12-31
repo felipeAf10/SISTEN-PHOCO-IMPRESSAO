@@ -27,11 +27,16 @@ const AccessControl: React.FC<AccessControlProps> = ({ permissions, setPermissio
     role: 'sales' as UserRole
   });
 
-  const togglePermission = (role: UserRole, key: keyof RolePermissions) => {
+  const togglePermission = async (role: UserRole, key: keyof RolePermissions) => {
     if (role === 'admin') return;
     const newPerms = { ...permissions };
     newPerms[role] = { ...newPerms[role], [key]: !newPerms[role][key] };
     setPermissions(newPerms);
+    try {
+      await api.permissions.update(role, newPerms[role]);
+    } catch (error) {
+      console.error("Error saving permission:", error);
+    }
   };
 
   const roles: { id: UserRole; label: string; icon: any }[] = [
@@ -46,7 +51,8 @@ const AccessControl: React.FC<AccessControlProps> = ({ permissions, setPermissio
     { key: 'scheduling', icon: ClipboardList, label: 'Agenda & Prazos' },
     { key: 'production', label: 'Board Produção', icon: ClipboardList },
     { key: 'products', label: 'Precificação Materiais', icon: Package },
-    { key: 'financial', label: 'Módulo Financeiro', icon: Calculator }
+    { key: 'financial', label: 'Módulo Financeiro', icon: Calculator },
+    { key: 'time_clock', label: 'RH / Ponto', icon: Users }
   ];
 
   const handleOpenUserModal = (user?: User) => {
@@ -71,7 +77,7 @@ const AccessControl: React.FC<AccessControlProps> = ({ permissions, setPermissio
     try {
       if (editingUser) {
         const updatedUser: User = { ...editingUser, ...userForm };
-        await api.users.update(updatedUser);
+        await api.users.update(updatedUser.id, updatedUser);
         setUsers(users.map(u => u.id === editingUser.id ? updatedUser : u));
       } else {
         const newUser: User = { id: crypto.randomUUID(), ...userForm };
@@ -108,7 +114,7 @@ const AccessControl: React.FC<AccessControlProps> = ({ permissions, setPermissio
           <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Controle de <span className="text-brand-magenta">Equipe</span></h2>
           <p className="text-slate-500 font-medium mt-1">Gerencie usuários e suas permissões no sistema.</p>
         </div>
-        <div className="flex glass-card bg-slate-200/50 p-1.5 rounded-2xl border border-white/50">
+        <div className="flex gap-2 w-full md:w-auto overflow-x-auto custom-scrollbar glass-card bg-slate-200/50 p-1.5 rounded-2xl border border-white/50 whitespace-nowrap">
           <button
             onClick={() => setActiveTab('users')}
             className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'users' ? 'bg-white text-brand-magenta shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
@@ -135,8 +141,8 @@ const AccessControl: React.FC<AccessControlProps> = ({ permissions, setPermissio
             </button>
           </div>
 
-          <div className="glass-card bg-white/70 rounded-[2.5rem] border border-white/50 overflow-hidden shadow-sm">
-            <table className="w-full text-left">
+          <div className="glass-card bg-white/70 rounded-[2.5rem] border border-white/50 overflow-hidden shadow-sm overflow-x-auto">
+            <table className="w-full text-left min-w-[600px]">
               <thead className="bg-slate-50/50 border-b border-slate-100">
                 <tr>
                   <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Membro</th>
