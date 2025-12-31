@@ -77,16 +77,17 @@ const LaserPriceModal: React.FC<LaserPriceModalProps> = ({ isOpen, onClose, onCo
 
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="glass-card w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] bg-slate-900/90 border border-white/10">
+            {/* Added bg-slate-900 explicitly */}
+            <div className="glass-card w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] bg-slate-900/95 border border-white/10 text-slate-200">
                 {/* Header */}
-                <div className="p-4 lg:p-8 bg-[#0F172A] text-white flex justify-between items-center shrink-0">
+                <div className="p-4 lg:p-8 bg-[#0F172A] text-white flex justify-between items-center shrink-0 border-b border-white/5">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-500">
-                            <Zap size={24} strokeWidth={1.5} />
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-slate-900 shadow-lg shadow-amber-500/20">
+                            <Zap size={24} strokeWidth={2.5} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold tracking-tight">Laser & CNC</h2>
-                            <p className="text-slate-400 text-xs font-medium">Corte, Gravação e Personalização</p>
+                            <h2 className="text-xl font-bold tracking-tight uppercase">Laser & CNC</h2>
+                            <p className="text-slate-400 text-xs font-bold uppercase mt-1">Corte, Gravação e Personalização</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white">
@@ -94,167 +95,138 @@ const LaserPriceModal: React.FC<LaserPriceModalProps> = ({ isOpen, onClose, onCo
                     </button>
                 </div>
 
-                <div className="flex flex-col lg:flex-row h-full overflow-hidden">
+                <div className="flex flex-col lg:flex-row h-full overflow-hidden bg-slate-900/50">
                     {/* Controls */}
                     <div className="flex-1 p-4 lg:p-8 overflow-y-auto custom-scrollbar space-y-8">
 
-                        {/* Mode Selector */}
-                        <div className="flex bg-slate-800/50 p-1.5 rounded-2xl overflow-x-auto border border-white/5">
-                            <button onClick={() => setMode('cut')} className={`flex-1 py-3 px-4 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap ${mode === 'cut' ? 'bg-amber-500 shadow-lg shadow-amber-500/20 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}>Corte Laser</button>
-                            <button onClick={() => setMode('engrave')} className={`flex-1 py-3 px-4 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap ${mode === 'engrave' ? 'bg-amber-500 shadow-lg shadow-amber-500/20 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}>Gravação UV</button>
-                            <button onClick={() => setMode('promotional')} className={`flex-1 py-3 px-4 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap ${mode === 'promotional' ? 'bg-amber-500 shadow-lg shadow-amber-500/20 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}>Brindes & Itens</button>
+                        {/* Mode Switch */}
+                        <div className="flex bg-slate-950/50 p-1.5 rounded-2xl border border-white/5">
+                            <button
+                                onClick={() => setMode('cut')}
+                                className={`flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'cut' ? 'bg-amber-500 shadow-lg shadow-amber-500/20 text-slate-900' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                            >
+                                Corte
+                            </button>
+                            <button
+                                onClick={() => setMode('engrave')}
+                                className={`flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'engrave' ? 'bg-amber-500 shadow-lg shadow-amber-500/20 text-slate-900' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                            >
+                                Gravação
+                            </button>
+                            <button
+                                onClick={() => setMode('promotional')}
+                                className={`flex-1 py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'promotional' ? 'bg-amber-500 shadow-lg shadow-amber-500/20 text-slate-900' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                            >
+                                Brindes
+                            </button>
                         </div>
 
-                        <div className="space-y-6">
-                            {mode === 'promotional' ? (
-                                <>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Produto Base</label>
-                                        <select value={selectedPromoId} onChange={e => setSelectedPromoId(e.target.value)} className="w-full px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none text-slate-200">
-                                            {PROMO_PRODUCTS.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name} (Custo Base: R$ {p.cost.toFixed(2)})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="flex items-center gap-4 bg-slate-800/50 p-4 rounded-2xl border border-white/5">
-                                        <input type="checkbox" id="supply" checked={supplyProduct} onChange={e => setSupplyProduct(e.target.checked)} className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500 bg-slate-900 border-slate-700" />
-                                        <label htmlFor="supply" className="text-sm font-bold text-slate-300 cursor-pointer select-none">Fornecer o Produto (Incluir custo do item)</label>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Quantidade</label>
-                                        <input type="number" value={promoQty} onChange={e => setPromoQty(Math.max(1, parseInt(e.target.value) || 1))} className="w-full pl-6 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-black text-lg outline-none text-slate-200" />
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Material</label>
-                                        <input type="text" value={material} onChange={(e) => setMaterial(e.target.value)} className="w-full px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none text-slate-200" placeholder="Nome do Material" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Espessura (Ref)</label>
-                                        <input type="text" value={thickness} onChange={(e) => setThickness(e.target.value)} className="w-full px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none text-slate-200" placeholder="ex: 3mm" />
-                                    </div>
-                                </div>
-                            )}
-
-                            {mode !== 'promotional' && (
-                                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl space-y-2">
-                                    <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                                        <DollarSign size={12} /> Preço do Material (R$/m²) *
-                                    </label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={manualPricePerM2}
-                                        onChange={(e) => setManualPricePerM2(parseFloat(e.target.value) || 0)}
-                                        className="w-full pl-4 pr-4 py-3 bg-slate-900 border border-amber-500/30 rounded-xl font-black text-amber-500 focus:ring-2 focus:ring-amber-500 outline-none"
-                                        placeholder="0.00"
-                                    />
-                                    {manualPricePerM2 === 0 && <p className="text-[10px] text-amber-500 font-bold animate-pulse">⚠️ Preço não detectado. Insira manuamente.</p>}
-                                </div>
-                            )}
-
-                            {mode !== 'promotional' && (
+                        {mode === 'promotional' ? (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dimensões da Peça (Metros)</label>
-                                    <div className="flex gap-4 items-center">
-                                        <div className="relative flex-1">
-                                            <Ruler size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input type="number" step="0.01" value={materialArea.w} onChange={e => setMaterialArea({ ...materialArea, w: parseFloat(e.target.value) || 0 })} className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none text-slate-200" placeholder="Largura" />
-                                        </div>
-                                        <span className="text-slate-500 font-bold">x</span>
-                                        <div className="relative flex-1">
-                                            <Ruler size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input type="number" step="0.01" value={materialArea.h} onChange={e => setMaterialArea({ ...materialArea, h: parseFloat(e.target.value) || 0 })} className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none text-slate-200" placeholder="Altura" />
-                                        </div>
-                                    </div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Produto Base</label>
+                                    <select value={selectedPromoId} onChange={e => setSelectedPromoId(e.target.value)} className="w-full px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500 text-white">
+                                        {PROMO_PRODUCTS.map(p => (
+                                            <option key={p.id} value={p.id}>{p.name} - Unit. R$ {p.cost.toFixed(2)}</option>
+                                        ))}
+                                    </select>
                                 </div>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{mode === 'promotional' ? 'Tempo de Gravação (un)' : 'Tempo de Máquina'}</label>
-                                    <div className="relative">
-                                        <Clock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input type="number" value={machineTime} onChange={e => setMachineTime(parseFloat(e.target.value) || 0)} className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-black text-lg outline-none text-amber-500" placeholder="Minutos" />
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Quantidade</label>
+                                    <input type="number" value={promoQty} onChange={e => setPromoQty(parseInt(e.target.value) || 0)} className="w-full px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-black text-lg outline-none focus:ring-2 focus:ring-amber-500 text-white" />
+                                </div>
+                                <div className="flex items-center gap-3 p-4 bg-slate-800/50 border border-slate-700 rounded-2xl">
+                                    <input type="checkbox" checked={supplyProduct} onChange={e => setSupplyProduct(e.target.checked)} className="w-5 h-5 rounded-md border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500" />
+                                    <label className="text-xs font-bold text-slate-300">Incluir Custo do Produto</label>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Material</label>
+                                    <input type="text" value={material} onChange={e => setMaterial(e.target.value)} className="w-full px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500 text-white" placeholder="Ex: Acrílico, MDF..." />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Espessura</label>
+                                        <input type="text" value={thickness} onChange={e => setThickness(e.target.value)} className="w-full px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500 text-white" placeholder="Ex: 3mm" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Preço Manual (m²)</label>
+                                        <input type="number" value={manualPricePerM2} onChange={e => setManualPricePerM2(parseFloat(e.target.value) || 0)} className="w-full px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500 text-white" />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa de Setup/Arquivo</label>
-                                    <div className="relative">
-                                        <DollarSign size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input type="number" value={setupFee} onChange={e => setSetupFee(parseFloat(e.target.value) || 0)} className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-black text-lg outline-none text-emerald-500" />
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dimensões Material (m)</label>
+                                    <div className="flex gap-4">
+                                        <input type="number" step="0.01" value={materialArea.w} onChange={e => setMaterialArea({ ...materialArea, w: parseFloat(e.target.value) || 0 })} placeholder="Largura" className="flex-1 px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500 text-white" />
+                                        <span className="self-center font-black text-slate-500">x</span>
+                                        <input type="number" step="0.01" value={materialArea.h} onChange={e => setMaterialArea({ ...materialArea, h: parseFloat(e.target.value) || 0 })} placeholder="Altura" className="flex-1 px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500 text-white" />
                                     </div>
                                 </div>
                             </div>
+                        )}
+
+                        {/* Machine Time */}
+                        <div className="bg-slate-950/30 border border-slate-700/50 p-6 rounded-[2rem] space-y-4">
+                            <div className="flex items-center gap-3 mb-2">
+                                <Clock className="text-amber-500" size={20} />
+                                <h4 className="font-black text-amber-500 uppercase text-xs tracking-widest">Tempo de Máquina</h4>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase">Minutos</label>
+                                    <input type="number" value={machineTime} onChange={e => setMachineTime(parseFloat(e.target.value) || 0)} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white outline-none focus:ring-2 focus:ring-amber-500" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase">Setup (Taxa Fixa)</label>
+                                    <input type="number" value={setupFee} onChange={e => setSetupFee(parseFloat(e.target.value) || 0)} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white outline-none focus:ring-2 focus:ring-amber-500" />
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-slate-500 font-medium">Custo Hora Máquina: <span className="text-white">R$ {COSTS.machineHour.toFixed(2)}</span></p>
                         </div>
 
-                        <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex gap-3 text-amber-500">
-                            <Info size={20} className="shrink-0 mt-1" />
-                            <p className="text-xs font-medium leading-relaxed">
-                                {mode === 'promotional'
-                                    ? "O cálculo inclui o custo do produto (se selecionado) + tempo de gravação por unidade. Taxa de setup é cobrada uma vez ou por lote."
-                                    : "O cálculo considera o custo de hora/máquina (R$ 120,00/h) somado ao custo do material por m². O Preço do Material é puxado do cadastro ou inserido manualmente."
-                                }
-                            </p>
-                        </div>
                     </div>
 
-                    {/* Solution Preview */}
-                    <div className="w-full lg:w-[350px] bg-slate-900 text-white p-8 flex flex-col justify-between relative overflow-hidden">
-                        {/* Background Pattern */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-
-                        <div className="space-y-6 relative z-10">
+                    {/* Footer/Preview - Right Side */}
+                    <div className="w-full lg:w-[350px] bg-amber-500 p-8 flex flex-col justify-between text-slate-900 shadow-inner">
+                        <div className="space-y-6">
                             <div>
-                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Resumo de Custos</p>
-                                <div className="mt-4 space-y-3">
-                                    {mode === 'promotional' ? (
-                                        <>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-slate-400">Produto ({promoQty}x)</span>
-                                                <span className="font-bold">R$ {(supplyProduct ? (PROMO_PRODUCTS.find(p => p.id === selectedPromoId)?.cost || 0) * (PROMO_PRODUCTS.find(p => p.id === selectedPromoId)?.suggestedMarkup || 1) * promoQty : 0).toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-slate-400">Gravação ({machineTime}min/un)</span>
-                                                <span className="font-bold">R$ {((machineTime * (COSTS.machineHour / 60)) * promoQty).toFixed(2)}</span>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-slate-400">Máquina ({machineTime}min)</span>
-                                                <span className="font-bold">R$ {(machineTime * (COSTS.machineHour / 60)).toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-slate-400">Material ({(materialArea.w * materialArea.h).toFixed(2)}m²)</span>
-                                                {/* @ts-ignore */}
-                                                <span className="font-bold">R$ {((materialArea.w * materialArea.h) * manualPricePerM2).toFixed(2)}</span>
-                                            </div>
-                                        </>
-                                    )}
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-400">Setup</span>
-                                        <span className="font-bold">R$ {setupFee.toFixed(2)}</span>
+                                <h3 className="font-black uppercase text-3xl tracking-tighter">Resumo</h3>
+                                <p className="text-xs font-bold opacity-70 uppercase tracking-widest mt-1">Cálculo Estimado</p>
+                            </div>
+
+                            <div className="space-y-3 font-bold text-sm">
+                                <div className="flex justify-between border-b border-slate-900/10 pb-2">
+                                    <span className="opacity-70">Material</span>
+                                    <span>R$ {((materialArea.w * materialArea.h * manualPricePerM2) || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-900/10 pb-2">
+                                    <span className="opacity-70">Máquina ({machineTime}m)</span>
+                                    <span>R$ {(machineTime * (COSTS.machineHour / 60)).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-900/10 pb-2">
+                                    <span className="opacity-70">Setup/Taxa</span>
+                                    <span>R$ {setupFee.toFixed(2)}</span>
+                                </div>
+                                {mode === 'promotional' && (
+                                    <div className="flex justify-between border-b border-slate-900/10 pb-2">
+                                        <span className="opacity-70">Produtos ({promoQty})</span>
+                                        <span>R$ {((supplyProduct ? (PROMO_PRODUCTS.find(p => p.id === selectedPromoId)?.cost || 0) * (PROMO_PRODUCTS.find(p => p.id === selectedPromoId)?.suggestedMarkup || 1) : 0) * promoQty).toFixed(2)}</span>
                                     </div>
-                                </div>
-                                <div className="mt-4 pt-4 border-t border-white/10">
-                                    <p className="text-right text-3xl font-black text-amber-500">R$ {total.toFixed(2)}</p>
-                                    <p className="text-right text-[10px] text-slate-500 uppercase font-black tracking-widest mt-1">Total Estimado</p>
-                                </div>
+                                )}
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleConfirm}
-                            disabled={mode !== 'promotional' && (materialArea.w === 0 || materialArea.h === 0)}
-                            className="w-full py-5 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            Adicionar ao Orçamento <ArrowRight size={16} />
-                        </button>
+                        <div className="space-y-4">
+                            <div className="text-right">
+                                <p className="text-xs font-black uppercase tracking-widest opacity-60">Total Final</p>
+                                <p className="text-4xl font-black tracking-tighter">R$ {total.toFixed(2)}</p>
+                            </div>
+                            <button onClick={handleConfirm} className="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10 active:scale-95">
+                                Adicionar ao Orçamento <ArrowRight size={16} />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

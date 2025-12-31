@@ -99,137 +99,135 @@ const AutomotiveModal: React.FC<AutomotiveModalProps> = ({ isOpen, onClose, onCo
                 vehicle: `${autoForm.make} ${autoForm.model} ${autoForm.year}`,
                 parts: Array.from(selectedAutoParts),
                 complexity,
-                materialLevel,
-                vinylBrand,
-                areaM2: currentAutoArea
-            },
-            overrideUnitPrice: activeProduct.salePrice * priceMultiplier // Pass Rate (Price * Multiplier) so (Rate * Area) = Total
+                materialLevel
+            }
         });
+        onClose();
     };
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="glass-card w-full max-w-5xl rounded-[3.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] bg-slate-900/90 border border-white/10">
-                <div className="p-4 lg:p-10 bg-[#0F172A] text-white flex justify-between items-center shrink-0">
+            {/* Added bg-slate-900 explicitly */}
+            <div className="glass-card w-full max-w-6xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] bg-slate-900/95 border border-white/10 text-slate-200">
+                {/* Header */}
+                <div className="p-4 lg:p-8 bg-[#0F172A] text-white flex justify-between items-center shrink-0 border-b border-white/5">
                     <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-cyan-500/20 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)] text-cyan-400">
-                            <Car size={32} />
+                        <div className="w-14 h-14 bg-fuchsia-600 rounded-2xl flex items-center justify-center shadow-lg shadow-fuchsia-500/20">
+                            <Car size={32} className="text-white" />
                         </div>
                         <div>
-                            <h4 className="text-xl lg:text-2xl font-black uppercase tracking-tight text-white">Studio Automotivo Pro</h4>
-                            <p className="text-slate-400 text-xs font-bold uppercase mt-1">Envelopamento Comercial & Frota</p>
+                            <h2 className="text-2xl font-black tracking-tight uppercase">Envelopamento & Veículos</h2>
+                            <p className="text-slate-400 text-xs font-bold uppercase mt-1">Cálculo por Peças e Complexidade</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"><X size={32} /></button>
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white">
+                        <X size={24} />
+                    </button>
                 </div>
 
-                <div className="p-4 lg:p-10 overflow-y-auto custom-scrollbar flex-1 space-y-10 bg-transparent">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Marca</label>
-                            <input type="text" value={autoForm.make} onChange={e => setAutoForm({ ...autoForm, make: e.target.value })} className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-2xl font-black outline-none text-slate-200 placeholder-slate-500" placeholder="Ex: VW" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Modelo</label>
-                            <input type="text" value={autoForm.model} onChange={e => setAutoForm({ ...autoForm, model: e.target.value })} className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-2xl font-black outline-none text-slate-200 placeholder-slate-500" placeholder="Ex: Saveiro G1" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ano</label>
-                            <input type="text" value={autoForm.year} onChange={e => setAutoForm({ ...autoForm, year: e.target.value })} className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700 rounded-2xl font-black outline-none text-slate-200 placeholder-slate-500" placeholder="Ex: 1993" />
-                        </div>
-                        <button onClick={handleSearchVehicle} disabled={isSearchingAuto} className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white h-[52px] rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-[0_4px_15px_rgba(6,182,212,0.3)] flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 hover:brightness-110">
-                            {isSearchingAuto ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} Consultar IA
-                        </button>
-                    </div>
+                <div className="flex flex-col lg:flex-row flex-1 overflow-hidden bg-slate-900/50">
+                    {/* Controls */}
+                    <div className="flex-1 p-4 lg:p-8 overflow-y-auto custom-scrollbar space-y-8">
 
-                    {autoBreakdown && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-top-4">
-                            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Scissors size={14} /> Selecione as peças desejadas (sangria de 5cm incluída)</h5>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {Object.entries(autoBreakdown).map(([part, dim]) => {
-                                    const d = dim as { w: number, h: number };
-                                    const area = d.w * d.h;
-                                    if (area <= 0.01) return null;
-                                    const isSelected = selectedAutoParts.has(part);
-
-                                    return (
-                                        <button
-                                            key={part}
-                                            onClick={() => toggleAutoPart(part)}
-                                            className={`p-5 rounded-[1.5rem] border-2 text-left transition-all relative overflow-hidden group ${isSelected ? 'border-fuchsia-500/50 bg-fuchsia-500/10 shadow-[0_0_15px_rgba(217,70,239,0.2)]' : 'border-white/5 bg-slate-800/40 hover:bg-slate-800 hover:border-slate-600'}`}
-                                        >
-                                            <div className="flex justify-between items-start mb-2">
-                                                <p className={`text-[8px] font-black uppercase tracking-widest ${isSelected ? 'text-fuchsia-400' : 'text-slate-500'}`}>{part.replace(/_/g, ' ')}</p>
-                                                <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-fuchsia-500 border-fuchsia-500' : 'border-slate-600 bg-slate-700/50'}`}>
-                                                    {isSelected && <Check size={12} className="text-white" strokeWidth={4} />}
-                                                </div>
-                                            </div>
-                                            <p className={`text-sm font-black ${isSelected ? 'text-white' : 'text-slate-300'}`}>{area.toFixed(2)} m²</p>
-                                            <p className="text-[8px] font-bold text-slate-500 mt-1">{d.w}m x {d.h}m</p>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="pt-8 border-t border-white/5">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-6">
-                                        <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><ClipboardCheck size={14} /> Detalhes Técnicos & Complexidade</h5>
-                                        <div className="grid grid-cols-1 gap-4">
-
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-slate-500 uppercase flex gap-2 items-center"><Gauge size={12} /> Complexidade da Superfície</label>
-                                                    <select value={complexity} onChange={e => setComplexity(e.target.value as any)} className="w-full px-4 py-3 bg-slate-800 border border-amber-500/20 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-amber-500 text-amber-400">
-                                                        {Object.keys(COMPLEXITY_MULTIPLIERS).map(k => <option key={k} value={k}>{k}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-slate-500 uppercase flex gap-2 items-center"><Layers size={12} /> Linha de Material</label>
-                                                    <select value={materialLevel} onChange={e => setMaterialLevel(e.target.value as any)} className="w-full px-4 py-3 bg-slate-800 border border-indigo-500/20 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500 text-indigo-400">
-                                                        {Object.keys(MATERIAL_LEVELS).map(k => <option key={k} value={k}>{k}</option>)}
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase">Marca do Vinil</label>
-                                                <select value={vinylBrand} onChange={e => setVinylBrand(e.target.value)} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-xs outline-none text-slate-200">
-                                                    <option>Avery Dennison</option>
-                                                    <option>3M Premium</option>
-                                                    <option>Oracal 651</option>
-                                                    <option>Alltak</option>
-                                                    <option>Imprimax</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-cyan-500/20 p-8 rounded-[2.5rem] text-white flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.1)] backdrop-blur-sm">
-                                        <div>
-                                            <p className="text-[10px] font-black uppercase text-cyan-400 tracking-widest">Resumo do Projeto Selecionado</p>
-                                            <div className="mt-4 space-y-1">
-                                                <p className="text-4xl font-black text-white">R$ {currentTotal.toFixed(2)}</p>
-                                                <div className="flex justify-between items-center border-t border-white/10 pt-2 mt-2">
-                                                    <p className="text-[10px] font-bold text-cyan-200 uppercase tracking-widest">Área: {currentAutoArea.toFixed(2)}m²</p>
-                                                    <p className="text-[10px] font-bold text-cyan-200 uppercase tracking-widest">Fator: x{(priceMultiplier).toFixed(2)}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={handleConfirm}
-                                            disabled={selectedAutoParts.size === 0}
-                                            className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white w-full py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg flex items-center justify-center gap-2 hover:brightness-110 transition-all active:scale-95 disabled:opacity-50"
-                                        >
-                                            Confirmar Seleção <ArrowRight size={18} />
-                                        </button>
-                                    </div>
+                        {/* Search Car */}
+                        <div className="bg-slate-950/50 border border-slate-700/50 p-6 rounded-[2rem] space-y-4">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <Sparkles size={14} className="text-fuchsia-500" /> Identificar Veículo
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <input placeholder="Marca (Ex: Fiat)" value={autoForm.make} onChange={e => setAutoForm({ ...autoForm, make: e.target.value })} className="px-5 py-4 bg-slate-800 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-fuchsia-500 text-white placeholder-slate-600 shadow-inner" />
+                                <input placeholder="Modelo (Ex: Fiorino)" value={autoForm.model} onChange={e => setAutoForm({ ...autoForm, model: e.target.value })} className="px-5 py-4 bg-slate-800 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-fuchsia-500 text-white placeholder-slate-600 shadow-inner" />
+                                <div className="flex gap-2">
+                                    <input placeholder="Ano" value={autoForm.year} onChange={e => setAutoForm({ ...autoForm, year: e.target.value })} className="flex-1 px-5 py-4 bg-slate-800 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-fuchsia-500 text-white placeholder-slate-600 shadow-inner" />
+                                    <button onClick={handleSearchVehicle} disabled={isSearchingAuto} className="bg-fuchsia-600 text-white px-6 rounded-2xl hover:bg-fuchsia-500 transition-colors shadow-lg shadow-fuchsia-500/20 disabled:opacity-50">
+                                        {isSearchingAuto ? <Loader2 className="animate-spin" /> : <ArrowRight />}
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                    )}
+
+                        {/* Configuration */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Nível de Material</label>
+                                <select value={materialLevel} onChange={e => setMaterialLevel(e.target.value as any)} className="w-full px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-fuchsia-500 text-white">
+                                    {Object.keys(MATERIAL_LEVELS).map(k => <option key={k} value={k}>{k}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Complexidade / Curvas</label>
+                                <select value={complexity} onChange={e => setComplexity(e.target.value as any)} className="w-full px-5 py-4 bg-slate-800 border border-slate-700 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-fuchsia-500 text-white">
+                                    {Object.keys(COMPLEXITY_MULTIPLIERS).map(k => <option key={k} value={k}>{k}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Parts Selection */}
+                        {autoBreakdown && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8">
+                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <Layers size={14} className="text-fuchsia-500" /> Seleção de Peças
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    {Object.entries(autoBreakdown).map(([part, dim]) => (
+                                        <button
+                                            key={part}
+                                            onClick={() => toggleAutoPart(part)}
+                                            className={`p-3 rounded-xl border flex flex-col items-start gap-1 transition-all ${selectedAutoParts.has(part) ? 'bg-fuchsia-600/20 border-fuchsia-500 text-white' : 'bg-slate-800 border-white/5 text-slate-400 hover:border-white/20 hover:bg-slate-700'}`}
+                                        >
+                                            <div className="flex justify-between w-full">
+                                                <span className="font-bold text-xs uppercase">{part}</span>
+                                                {selectedAutoParts.has(part) && <Check size={14} className="text-fuchsia-400" />}
+                                            </div>
+                                            <span className="text-[10px] opacity-60">{(dim as any).w}m x {(dim as any).h}m</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Preview / Footer - Right Side */}
+                    <div className="w-full lg:w-[400px] bg-gradient-to-br from-fuchsia-900 to-purple-900 text-white p-8 flex flex-col justify-between shadow-inner border-t lg:border-t-0 lg:border-l border-white/10 relative overflow-hidden">
+
+                        {/* Background Effect */}
+                        <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-fuchsia-500/20 rounded-full blur-[100px] pointer-events-none"></div>
+
+                        <div className="space-y-8 relative z-10">
+                            <div>
+                                <p className="text-fuchsia-300 text-[10px] font-black uppercase tracking-widest">Orçamento Estimado</p>
+                                <div className="mt-4">
+                                    <p className="text-5xl font-black tracking-tighter">R$ {currentTotal.toFixed(2)}</p>
+                                    <p className="text-xs text-fuchsia-200 mt-2 font-medium bg-black/20 inline-block px-3 py-1 rounded-lg">Multiplicador: {priceMultiplier.toFixed(2)}x</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-black/20 rounded-2xl p-6 space-y-3 border border-white/10 backdrop-blur-sm">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-fuchsia-200">Área Total</span>
+                                    <span className="font-bold">{currentAutoArea.toFixed(2)} m²</span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-fuchsia-200">Peças Selecionadas</span>
+                                    <span className="font-bold">{selectedAutoParts.size}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-fuchsia-200">Complexidade</span>
+                                    <span className="font-bold text-fuchsia-300">{complexity}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleConfirm}
+                            disabled={currentTotal === 0}
+                            className="w-full py-5 bg-white text-fuchsia-900 hover:bg-fuchsia-50 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-8 relative z-10"
+                        >
+                            Confirmar Envelopamento <ArrowRight size={16} />
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
