@@ -146,7 +146,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ products = [], customers = 
         setShowAutoModal(true);
       } else if (product.category.toLowerCase().includes('laser') || product.name.toLowerCase().includes('laser') || product.category === 'Corte Laser' || product.category === 'Rígidos') {
         setShowLaserModal(true);
-      } else if (product.category.toLowerCase().includes('adesivo') || product.name.toLowerCase().includes('etiqueta')) {
+      } else if (product.category.toLowerCase().includes('adesivo') || product.name.toLowerCase().includes('etiqueta') || product.name.toLowerCase().includes('adesivo') || product.category.toLowerCase().includes('flex')) {
         setShowStickerModal(true);
       } else {
         setSelectedRollWidth(product.availableRollWidths?.[0] || 0);
@@ -448,47 +448,47 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ products = [], customers = 
 
       {/* Modals */}
       {showConfigModal && activeProduct && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          {/* Standard Config Modal Layout */}
-          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          {/* Standard Config Modal Layout - Dark Theme */}
+          <div className="glass-card bg-slate-900 border border-white/10 rounded-[2rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0F172A]">
               <div>
-                <h3 className="font-black text-lg text-slate-800">{activeProduct.name}</h3>
-                <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Configuração Padrão</p>
+                <h3 className="font-black text-lg text-white">{activeProduct.name}</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Configuração Padrão</p>
               </div>
-              <button onClick={() => setShowConfigModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
+              <button onClick={() => setShowConfigModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Largura (m)</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Largura (m)</label>
                   <div className="relative">
-                    <Ruler size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type="number" step="0.01" value={dims.width} onChange={(e) => setDims({ ...dims, width: Number(e.target.value) })} className="w-full pl-10 pr-4 py-3 bg-slate-50 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    <Ruler size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input type="number" step="0.01" value={dims.width} onChange={(e) => setDims({ ...dims, width: Number(e.target.value) })} className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Altura (m)</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Altura (m)</label>
                   <div className="relative">
-                    <Maximize2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type="number" step="0.01" value={dims.height} onChange={(e) => setDims({ ...dims, height: Number(e.target.value) })} className="w-full pl-10 pr-4 py-3 bg-slate-50 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    <Maximize2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input type="number" step="0.01" value={dims.height} onChange={(e) => setDims({ ...dims, height: Number(e.target.value) })} className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
                   </div>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Quantidade</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Quantidade</label>
                 <div className="flex items-center gap-4">
-                  <button onClick={() => setDims(d => ({ ...d, qty: Math.max(1, d.qty - 1) }))} className="w-12 h-12 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-black text-slate-600 transition-colors">-</button>
-                  <input type="number" value={dims.qty} onChange={(e) => setDims({ ...dims, qty: Number(e.target.value) })} className="flex-1 text-center py-3 bg-slate-50 rounded-xl font-black text-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
-                  <button onClick={() => setDims(d => ({ ...d, qty: d.qty + 1 }))} className="w-12 h-12 rounded-xl bg-indigo-100 hover:bg-indigo-200 flex items-center justify-center font-black text-indigo-600 transition-colors">+</button>
+                  <button onClick={() => setDims(d => ({ ...d, qty: Math.max(1, d.qty - 1) }))} className="w-12 h-12 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center font-black text-slate-400 transition-colors">-</button>
+                  <input type="number" value={dims.qty} onChange={(e) => setDims({ ...dims, qty: Number(e.target.value) })} className="flex-1 text-center py-3 bg-slate-800 border border-slate-700 rounded-xl font-black text-lg text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <button onClick={() => setDims(d => ({ ...d, qty: d.qty + 1 }))} className="w-12 h-12 rounded-xl bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center font-black text-white transition-colors shadow-lg shadow-indigo-500/20">+</button>
                 </div>
               </div>
-              <div className="pt-6 border-t border-slate-100">
+              <div className="pt-6 border-t border-white/5">
                 <div className="flex justify-between items-end mb-4">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Subtotal</span>
-                  <span className="text-3xl font-black text-indigo-600 tracking-tighter">R$ {currentItemSubtotal.toFixed(2)}</span>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Subtotal Estimado</span>
+                  <span className="text-3xl font-black text-indigo-400 tracking-tighter">R$ {currentItemSubtotal.toFixed(2)}</span>
                 </div>
-                <button onClick={() => addProductToCart(activeProduct, dims.qty, dims.width, dims.height)} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-500/20 active:scale-[0.98]">
+                <button onClick={() => addProductToCart(activeProduct, dims.qty, dims.width, dims.height)} className="w-full py-4 bg-white text-indigo-700 rounded-xl font-black uppercase tracking-widest hover:bg-slate-100 transition-all shadow-xl active:scale-[0.98]">
                   Adicionar ao Orçamento
                 </button>
               </div>
@@ -539,21 +539,21 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ products = [], customers = 
       {/* Pitch Modal */}
       {generatedPitch && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl relative">
+          <div className="glass-card bg-slate-900 border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl relative">
             <div className="p-8 pb-4">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h2 className="text-2xl font-black text-slate-800 mb-1">Pitch de Vendas IA</h2>
-                  <p className="text-sm text-slate-500 font-medium">Gerado com base no perfil do cliente</p>
+                  <h2 className="text-2xl font-black text-white mb-1">Pitch de Vendas IA</h2>
+                  <p className="text-sm text-slate-400 font-medium">Gerado com base no perfil do cliente</p>
                 </div>
-                <button onClick={() => setGeneratedPitch('')} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={24} /></button>
+                <button onClick={() => setGeneratedPitch('')} className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white"><X size={24} /></button>
               </div>
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 max-h-[50vh] overflow-y-auto whitespace-pre-wrap font-mono text-sm text-slate-600 shadow-inner">
+              <div className="bg-slate-950/50 p-6 rounded-2xl border border-white/5 max-h-[50vh] overflow-y-auto whitespace-pre-wrap font-mono text-sm text-slate-300 shadow-inner">
                 {generatedPitch}
               </div>
             </div>
-            <div className="p-8 pt-4 bg-white border-t border-slate-100 flex gap-4">
-              <button onClick={() => { navigator.clipboard.writeText(generatedPitch); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="flex-1 py-4 bg-indigo-50 text-indigo-700 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
+            <div className="p-8 pt-4 bg-slate-900/50 border-t border-white/5 flex gap-4">
+              <button onClick={() => { navigator.clipboard.writeText(generatedPitch); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20">
                 {copied ? <Check size={16} /> : <Copy size={16} />}
                 {copied ? 'Copiado!' : 'Copiar Texto'}
               </button>
