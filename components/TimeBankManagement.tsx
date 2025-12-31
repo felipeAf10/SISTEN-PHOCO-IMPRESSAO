@@ -38,13 +38,26 @@ const TimeBankManagement: React.FC<TimeBankManagementProps> = ({ currentUser }) 
         try {
             if (activeTab === 'employees') {
                 const uData = await api.users.list();
-                setUsers(uData);
+                setUsers(uData || []);
             } else if (activeTab === 'records' || activeTab === 'report') {
-                const recs = await api.timeRecords.getAll(startDate, endDate);
-                setRecords(recs);
+                try {
+                    const recs = await api.timeRecords.getAll(startDate, endDate);
+                    setRecords(recs || []);
+                } catch (err: any) {
+                    console.error("Error fetching records:", err);
+                    if (err?.code === 'PGRST116') {
+                        setRecords([]);
+                    } else {
+                        // Fallback: If getAll fails (maybe RLS permission issue for non-admins disguised), just show empty
+                        // Ideally checking user role before calling getAll would be better, but we want to avoid crashing.
+                        console.warn("Falling back to empty records due to API error.");
+                        setRecords([]);
+                    }
+                }
             }
         } catch (error) {
             console.error("Error loading data", error);
+            alert("Erro ao carregar dados. Verifique sua conexão.");
         } finally {
             setLoading(false);
         }

@@ -93,7 +93,12 @@ const TimeClock: React.FC<TimeClockProps> = ({ user }) => {
 
     const formatTime = (iso?: string) => iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
 
-    if (loading) return <div className="p-10 text-center">Carregando Ponto...</div>;
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center p-12 gap-4">
+            <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+            <p className="text-slate-400 font-bold text-sm tracking-widest uppercase animate-pulse">Carregando Ponto...</p>
+        </div>
+    );
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
