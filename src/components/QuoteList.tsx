@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Quote, Customer, Product, QuoteStatus, User } from '../types';
 import {
   Search, Filter, Calendar, DollarSign, MessageSquare, Copy, Trash2,
-  Check, Loader2, Plus, FileText, ChevronDown, List, LayoutGrid, Printer, Layers, Settings
+  Check, Loader2, Plus, FileText, ChevronDown, List, LayoutGrid, Printer, Layers, Settings, Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateSalesPitch } from '../services/geminiService';
@@ -298,6 +298,14 @@ const QuoteList: React.FC<QuoteListProps> = ({ quotes, setQuotes, customers, pro
                         title="Duplicar Orçamento"
                       >
                         <Layers size={16} />
+                      </button>
+
+                      <button
+                        onClick={() => onEditQuote && onEditQuote(quote)}
+                        className="p-2 text-secondary hover:text-blue-400 hover:bg-blue-50/10 rounded-lg transition-all"
+                        title="Editar Orçamento"
+                      >
+                        <Pencil size={16} />
                       </button>
 
                       <button
