@@ -667,52 +667,57 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
                </div>
              )}
 
-             <div className="grid grid-cols-1 gap-3">
-               {/* Design Fee */}
-               <div className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[9px] font-black text-secondary uppercase tracking-widest pl-1">🎨 Taxa de Arte</label>
-                  </div>
-                  <div className="relative group">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-indigo-400 transition-colors">
+             <div className="flex flex-col gap-3">
+               {/* Design Fee - Row Layout */}
+               <div className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-pink-500/10 text-pink-500 group-hover:bg-pink-500/20 transition-colors">
                       <Paintbrush size={14} />
                     </div>
+                    <label className="text-[10px] font-bold text-zinc-300 uppercase tracking-wide">Taxa de Arte</label>
+                  </div>
+                  <div className="relative w-28">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-medium">R$</span>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
                       value={designFee}
                       onChange={(e) => setDesignFee(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-input border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
+                      className="w-full bg-black/20 border border-white/10 rounded-lg pl-8 pr-2 py-1.5 text-xs font-bold text-white focus:ring-1 focus:ring-pink-500/50 outline-none text-right"
                       placeholder="0.00"
                     />
                   </div>
                </div>
 
-               {/* Installation Fee with Integrated Calc */}
-               <div className="space-y-1">
-                  <div className="flex justify-between items-center">
-                     <label className="text-[9px] font-black text-secondary uppercase tracking-widest pl-1">🚚 Frete & Instalação</label>
-                  </div>
-                  <div className="relative flex rounded-xl border border-white/10 bg-input focus-within:ring-2 focus-within:ring-indigo-500/50 transition-all overflow-hidden group">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-indigo-400 transition-colors">
+               {/* Installation Fee - Row Layout */}
+               <div className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-indigo-500/10 text-indigo-500 group-hover:bg-indigo-500/20 transition-colors">
                       <Truck size={14} />
                     </div>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={installFee}
-                      onChange={(e) => setInstallFee(parseFloat(e.target.value) || 0)}
-                      className="flex-1 bg-transparent border-none pl-9 pr-2 py-2.5 text-xs font-bold text-white outline-none"
-                      placeholder="0.00"
-                    />
+                    <label className="text-[10px] font-bold text-zinc-300 uppercase tracking-wide">Frete / Instalação</label>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 w-36">
+                    <div className="relative flex-1">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-medium">R$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={installFee}
+                        onChange={(e) => setInstallFee(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-black/20 border border-white/10 rounded-l-lg pl-7 pr-2 py-1.5 text-xs font-bold text-white focus:ring-1 focus:ring-indigo-500/50 outline-none text-right"
+                        placeholder="0.00"
+                      />
+                    </div>
                     {/* Calculator Button */}
                     <button
                       onClick={handleCalculateShipping}
                       disabled={isCalculatingShipping || !installAddress}
-                      className="px-3 bg-white/5 hover:bg-indigo-500 hover:text-white text-indigo-400 border-l border-white/10 transition-all flex items-center justify-center disabled:opacity-50 disabled:hover:bg-transparent"
-                      title="Calcular Frete Sugerido"
+                      className="px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-500 hover:text-white border border-indigo-500/20 rounded-r-lg transition-all flex items-center justify-center disabled:opacity-50 disabled:hover:bg-indigo-500/10 disabled:hover:text-indigo-500"
+                      title={installAddress ? "Calcular Frete Sugerido" : "Selecione um cliente para calcular"}
                     >
                       {isCalculatingShipping ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />}
                     </button>
