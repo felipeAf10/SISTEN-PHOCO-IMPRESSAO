@@ -23,19 +23,20 @@ export const generateMessage = (templateKey: keyof typeof WHATSAPP_TEMPLATES, da
     return encodeURIComponent(msg);
 };
 
-// Track the window reference outside the function scope (singleton module)
-let whatsappWindow: Window | null = null;
-
 export const openWhatsApp = (phone: string, message: string) => {
-    // Removed formatting to avoid errors if phone is malformed, assuming basic digits
     const cleanPhone = phone.replace(/\D/g, '');
     const url = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${message}`;
 
-    // Check if window exists and is not closed
-    if (whatsappWindow && !whatsappWindow.closed) {
-        whatsappWindow.location.href = url;
-        whatsappWindow.focus();
-    } else {
-        whatsappWindow = window.open(url, 'whatsapp-session');
+    // Try to find existing anchor or create one
+    let link = document.getElementById('whatsapp-link') as HTMLAnchorElement;
+    if (!link) {
+        link = document.createElement('a');
+        link.id = 'whatsapp-link';
+        link.target = 'whatsapp_session_tab'; // Underscores are safer for target names
+        link.style.display = 'none';
+        document.body.appendChild(link);
     }
+
+    link.href = url;
+    link.click();
 };
