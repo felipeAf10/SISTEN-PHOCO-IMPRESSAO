@@ -29,6 +29,7 @@ interface QuoteBuilderProps {
   finConfig: FinancialConfig;
   currentUser: User;
   onFinish: () => void;
+  initialQuote?: Quote | null;
 }
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -50,7 +51,7 @@ const CATEGORY_ICONS: Record<string, any> = {
   'Default': Layers
 };
 
-const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onFinish }) => {
+const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onFinish, initialQuote }) => {
   const queryClient = useQueryClient();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [cart, setCart] = useState<(QuoteItem & { labelData?: any })[]>([]);
@@ -139,6 +140,25 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
   useEffect(() => {
     setCurrentPage(1);
   }, [activeCategory, productSearch]);
+
+  // Hydrate from initialQuote if provided (Edit Mode)
+  useEffect(() => {
+    if (initialQuote) {
+      setSelectedCustomerId(initialQuote.customerId);
+      setCart(initialQuote.items);
+      setDesignFee(initialQuote.designFee || 0);
+      setInstallFee(initialQuote.installFee || 0);
+      setDeadlineDays(initialQuote.deadlineDays || 5);
+      setDiscountPercent(initialQuote.discount || 0);
+      setPaymentMethod(initialQuote.paymentMethod || 'Pix');
+      setDownPaymentMethod(initialQuote.downPaymentMethod || 'Pix');
+      setNotes(initialQuote.notes || '');
+      toast.info(`Editando orçamento #${initialQuote.id}`);
+    } else if (customers.length > 0 && !selectedCustomerId) {
+      // Only default select if NOT editing
+      // setSelectedCustomerId(customers[0].id);
+    }
+  }, [initialQuote, customers]);
 
   const { itemsTotal, subTotal, discountAmount, total } = useMemo(() => {
     const iTotal = cart.reduce((acc, item) => acc + item.subtotal, 0);

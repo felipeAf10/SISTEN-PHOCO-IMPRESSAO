@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Quote, Customer, Product, QuoteStatus, User } from '../types';
 import {
   Search, Filter, Calendar, DollarSign, MessageSquare, Copy, Trash2,
-  Check, Loader2, Plus, FileText, ChevronDown, List, LayoutGrid, Printer, Layers
+  Check, Loader2, Plus, FileText, ChevronDown, List, LayoutGrid, Printer, Layers, Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateSalesPitch } from '../services/geminiService';
@@ -15,11 +15,12 @@ interface QuoteListProps {
   customers: Customer[];
   products: Product[];
   onNewQuote: () => void;
+  onEditQuote?: (quote: Quote) => void;
   initialSearch?: string;
   currentUser: User;
 }
 
-const QuoteList: React.FC<QuoteListProps> = ({ quotes, setQuotes, customers, products, onNewQuote, initialSearch = '', currentUser }) => {
+const QuoteList: React.FC<QuoteListProps> = ({ quotes, setQuotes, customers, products, onNewQuote, onEditQuote, initialSearch = '', currentUser }) => {
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);

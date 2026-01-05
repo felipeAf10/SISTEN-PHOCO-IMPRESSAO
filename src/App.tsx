@@ -58,6 +58,7 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [fixedAssets, setFixedAssets] = useState<FixedAsset[]>([]);
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([]);
 
@@ -257,6 +258,11 @@ const App: React.FC = () => {
     }
   };
 
+  const handleEditQuote = (quote: Quote) => {
+    setEditingQuote(quote);
+    setActiveView('new-quote');
+  };
+
   const costPerHour = useMemo(() => {
     const totalFixedCosts = fixedCosts.reduce((acc, c) => acc + (Number(c.value) || 0), 0);
     const totalDepreciation = fixedAssets.reduce((acc, a) => acc + (Number(a.monthlyDepreciation) || 0), 0);
@@ -365,7 +371,7 @@ const App: React.FC = () => {
               {visibleNavItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => { setActiveView(item.id as AppView); setIsSidebarOpen(false); setGlobalSearch(''); }}
+                  onClick={() => { setActiveView(item.id as AppView); setIsSidebarOpen(false); setGlobalSearch(''); if (item.id === 'new-quote') setEditingQuote(null); }}
                   className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all group relative overflow-hidden ${activeView === (item.id as AppView) || (item.id === 'quotes' && activeView === 'new-quote') ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 neon-border' : 'text-secondary hover:bg-white/5 hover:text-primary'}`}
                 >
                   {activeView === (item.id as AppView) && <div className="absolute inset-y-0 left-0 w-1 bg-cyan-400 shadow-[0_0_10px_#22d3ee]"></div>}
@@ -433,10 +439,10 @@ const App: React.FC = () => {
                 {activeView === 'customers' && permissions[user!.role].customers && <CustomerList customers={customers} setCustomers={setCustomers} initialSearch={globalSearch} />}
                 {activeView === 'new-quote' && permissions[user!.role].quotes && (
                   <ErrorBoundary>
-                    <QuoteBuilder products={products} customers={customers} setQuotes={setQuotes} quotes={quotes} finConfig={finConfig} currentUser={user!} onFinish={() => setActiveView('quotes')} />
+                    <QuoteBuilder products={products} customers={customers} setQuotes={setQuotes} quotes={quotes} finConfig={finConfig} currentUser={user!} onFinish={() => { setActiveView('quotes'); setEditingQuote(null); }} initialQuote={editingQuote} />
                   </ErrorBoundary>
                 )}
-                {activeView === 'quotes' && permissions[user!.role].quotes && <QuoteList quotes={quotes} setQuotes={setQuotes} customers={customers} products={products} onNewQuote={() => setActiveView('new-quote')} initialSearch={globalSearch} currentUser={user!} />}
+                {activeView === 'quotes' && permissions[user!.role].quotes && <QuoteList quotes={quotes} setQuotes={setQuotes} customers={customers} products={products} onNewQuote={() => { setEditingQuote(null); setActiveView('new-quote'); }} onEditQuote={handleEditQuote} initialSearch={globalSearch} currentUser={user!} />}
                 {activeView === 'sales-pipeline' && (permissions[user!.role].quotes || user!.role === 'admin') && (
                   <ErrorBoundary>
                     <SalesPipeline />
