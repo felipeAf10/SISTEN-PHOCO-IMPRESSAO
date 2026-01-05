@@ -1,3 +1,4 @@
+```javascript
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Plus, Search, UserPlus, MessageSquare, Sparkles, Loader2, Trash2, ShoppingCart,
@@ -115,7 +116,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
       onFinish();
     },
     onError: (error: any) => {
-      toast.error(`Erro ao salvar: ${error.message}`);
+      toast.error(`Erro ao salvar: ${ error.message } `);
     }
   });
   // -------------------
@@ -180,7 +181,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
       // I'll set it as the fee, but warn user)
       setInstallFee(prev => {
         const newFee = Math.ceil(shippingCost); // Round up
-        toast.success(`Distância: ${distKm.toFixed(1)}km. Frete sugerido: R$ ${newFee}`);
+        toast.success(`Distância: ${ distKm.toFixed(1) } km.Frete sugerido: R$ ${ newFee } `);
         return newFee;
       });
     } else {
@@ -201,7 +202,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
       setPaymentMethod(initialQuote.paymentMethod || 'Pix');
       setDownPaymentMethod(initialQuote.downPaymentMethod || 'Pix');
       setNotes(initialQuote.notes || '');
-      toast.info(`Editando orçamento #${initialQuote.id}`);
+      toast.info(`Editando orçamento #${ initialQuote.id } `);
     } else if (customers.length > 0 && !selectedCustomerId) {
       // Only default select if NOT editing
       // setSelectedCustomerId(customers[0].id);
@@ -328,7 +329,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
     if (!customer) return;
 
     const tempQuote: Quote = {
-      id: `DRAFT-${Date.now().toString().slice(-4)}`,
+      id: `DRAFT - ${ Date.now().toString().slice(-4) } `,
       date: new Date().toISOString(),
       customerId: selectedCustomerId,
       items: cart,
@@ -359,13 +360,13 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
         productName: products.find(p => p.id === item.productId)?.name || 'Produto'
       }));
 
-      const quoteUrl = `${window.location.origin}/my-quote/${generatedQuoteId || 'PREVIEW'}`;
+      const quoteUrl = `${ window.location.origin } /my-quote/${ generatedQuoteId || 'PREVIEW' } `;
 
       const pitch = await generateSalesPitch(customer, itemsForPitch, total, designFee, installFee, deadlineDays, currentUser.name, quoteUrl);
 
       let finalPitch = pitch;
       if (discountPercent > 0) {
-        finalPitch = `🚨 *ORÇAMENTO PROMOCIONAL* 🚨\n\n${pitch}`;
+        finalPitch = `🚨 * ORÇAMENTO PROMOCIONAL * 🚨\n\n${ pitch } `;
       }
 
       setGeneratedPitch(finalPitch);
@@ -397,7 +398,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
       }));
 
       const newQuote: Quote = {
-        id: `PH-${Date.now().toString().slice(-6)}`,
+        id: `PH - ${ Date.now().toString().slice(-6) } `,
         date: new Date().toISOString(),
         customerId: selectedCustomerId,
         items: sanitizedItems as any,
@@ -419,7 +420,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
 
     } catch (error: any) {
       console.error("Error preparing quote:", error);
-      toast.error(`Erro ao preparar: ${error.message}`);
+      toast.error(`Erro ao preparar: ${ error.message } `);
     }
   };
 
@@ -474,7 +475,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
                   <button
                     key={cat}
                     onClick={() => handleCategoryChange(cat)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg whitespace-nowrap text-[11px] font-bold uppercase tracking-tight transition-all border ${isActive ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-surface hover:bg-surface-hover text-secondary border-white/5 hover:text-primary'}`}
+                    className={`flex items - center gap - 2 px - 3 py - 2 rounded - lg whitespace - nowrap text - [11px] font - bold uppercase tracking - tight transition - all border ${ isActive ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-surface hover:bg-surface-hover text-secondary border-white/5 hover:text-primary' } `}
                   >
                     <Icon size={12} />
                     {cat}
@@ -655,66 +656,65 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
             )}
           </div>
 
-          {/* Additional Fees (Design, Installation, Shipping) */}
-          <div className="p-4 bg-surface/50 border-t border-white/5 space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Design Fee */}
-              <div>
-                <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1">Taxa de Arte / Design</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-xs">R$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={designFee}
-                    onChange={(e) => setDesignFee(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-input border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-xs font-bold text-white focus:ring-1 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
+          {/* Additional Fees & Address Context */}
+          <div className="p-4 bg-surface/50 border-t border-white/5 space-y-4">
+             {/* Address Context Bar */}
+             {installAddress && (
+               <div className="flex items-center gap-2 text-[10px] text-zinc-400 bg-white/5 p-2 rounded-lg border border-white/5">
+                  <Truck size={12} className="text-indigo-400" />
+                  <span className="truncate flex-1">{installAddress}</span>
+                  {shippingDist !== null && <span className="font-bold text-indigo-300 whitespace-nowrap">{shippingDist.toFixed(1)} km</span>}
+               </div>
+             )}
 
-              {/* Installation Fee */}
-              <div>
-                <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1">Instalação / Frete</label>
-                <div className="relative flex gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-xs">R$</span>
+             <div className="grid grid-cols-2 gap-3">
+               {/* Design Fee */}
+               <div className="space-y-1">
+                  <label className="text-[9px] font-black text-secondary uppercase tracking-widest pl-1">Taxa de Arte</label>
+                  <div className="relative group">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-indigo-400 transition-colors">
+                      <Paintbrush size={14} />
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={designFee}
+                      onChange={(e) => setDesignFee(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-input border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
+                      placeholder="0.00"
+                    />
+                  </div>
+               </div>
+
+               {/* Installation Fee with Integrated Calc */}
+               <div className="space-y-1">
+                  <label className="text-[9px] font-black text-secondary uppercase tracking-widest pl-1">Instalação / Frete</label>
+                  <div className="relative flex rounded-xl border border-white/10 bg-input focus-within:ring-2 focus-within:ring-indigo-500/50 transition-all overflow-hidden group">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-indigo-400 transition-colors">
+                      <Truck size={14} />
+                    </div>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
                       value={installFee}
                       onChange={(e) => setInstallFee(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-input border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-xs font-bold text-white focus:ring-1 focus:ring-indigo-500 outline-none"
+                      className="flex-1 bg-transparent border-none pl-9 pr-2 py-2.5 text-xs font-bold text-white outline-none"
+                      placeholder="0.00"
                     />
+                    {/* Calculator Button */}
+                    <button
+                      onClick={handleCalculateShipping}
+                      disabled={isCalculatingShipping || !installAddress}
+                      className="px-3 bg-white/5 hover:bg-indigo-500 hover:text-white text-indigo-400 border-l border-white/10 transition-all flex items-center justify-center disabled:opacity-50 disabled:hover:bg-transparent"
+                      title="Calcular Frete Sugerido"
+                    >
+                      {isCalculatingShipping ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />}
+                    </button>
                   </div>
-
-                  {/* Shipping Calculator Button */}
-                  <button
-                    onClick={handleCalculateShipping}
-                    disabled={isCalculatingShipping || !installAddress}
-                    className="px-3 bg-surface-hover hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-xl transition-all flex items-center justify-center disabled:opacity-50"
-                    title={installAddress ? `Calcular frete para: ${installAddress}` : "Selecione um cliente com endereço"}
-                  >
-                    {isCalculatingShipping ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
-                  </button>
-                </div>
-                {shippingDist !== null && (
-                  <p className="text-[9px] text-indigo-300 mt-1 font-medium flex items-center gap-1">
-                    <Check size={10} /> Distância: {shippingDist.toFixed(1)}km
-                  </p>
-                )}
-              </div>
-
-              {/* Address Display (Read Only) */}
-              <div className="hidden lg:block opacity-70">
-                <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1">Endereço de Entrega</label>
-                <p className="text-[10px] text-zinc-400 truncate bg-white/5 p-2.5 rounded-xl border border-white/5">
-                  {installAddress || 'Selecione um cliente para carregar endereço'}
-                </p>
-              </div>
-            </div>
+               </div>
+             </div>
           </div>
 
           {/* Totals & Actions */}
@@ -992,75 +992,77 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
                 </button>
 
                 <button onClick={() => {
-                  const url = `${window.location.origin}/my-quote/${generatedQuoteId || ''}`;
+                  const url = `${ window.location.origin } /my-quote/${ generatedQuoteId || '' } `;
                   navigator.clipboard.writeText(url);
-                  alert(`Link do Portal copiado: ${url}`);
+                  alert(`Link do Portal copiado: ${ url } `);
                 }} className="flex-1 py-4 bg-cyan-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-cyan-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20">
                   <Share2 size={16} /> Link do Portal
                 </button>
 
                 <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(generatedPitch)}`, '_blank')} className="flex-1 py-4 bg-[#25D366] text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-[#20bd5a] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-500/20">
-                  <MessageSquare size={16} /> Enviar WhatsApp
-                </button>
-              </div>
-            </div>
-          </div>
+<MessageSquare size={16} /> Enviar WhatsApp
+                </button >
+              </div >
+            </div >
+          </div >
         )
       }
 
-      {/* Laser Calc Modal */}
-      {showLaserCalc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-surface border border-white/10 rounded-2xl shadow-2xl custom-scrollbar">
-            <button
-              onClick={() => setShowLaserCalc(false)}
-              className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-red-500/20 text-white/50 hover:text-red-500 rounded-full transition-colors z-10"
-            >
-              <X size={20} />
-            </button>
-            <div className="p-1">
-              <React.Suspense fallback={<div className="p-10 text-center"><Loader2 className="animate-spin mx-auto text-brand-magenta" /></div>}>
-                <LaserCalculator
-                  products={products}
-                  onAddToQuote={(item: any) => {
-                    // Direct add to cart
-                    const newItem: QuoteItem = {
-                      productId: `laser-${Date.now()}`,
-                      productName: item.productName,
-                      quantity: item.quantity,
-                      unitPrice: item.unitPrice,
-                      subtotal: item.subtotal,
-                      width: item.width || 0,
-                      height: item.height || 0,
-                      manualPrice: item.subtotal // Lock price
-                    };
-                    setCart([...cart, newItem]);
-                    setShowLaserCalc(false);
-                    toast.success('Corte Laser adicionado!', {
-                      style: { background: '#10B981', color: 'white', border: 'none' }
-                    });
-                  }}
-                />
-              </React.Suspense>
-            </div>
-          </div>
+{/* Laser Calc Modal */ }
+{
+  showLaserCalc && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-surface border border-white/10 rounded-2xl shadow-2xl custom-scrollbar">
+        <button
+          onClick={() => setShowLaserCalc(false)}
+          className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-red-500/20 text-white/50 hover:text-red-500 rounded-full transition-colors z-10"
+        >
+          <X size={20} />
+        </button>
+        <div className="p-1">
+          <React.Suspense fallback={<div className="p-10 text-center"><Loader2 className="animate-spin mx-auto text-brand-magenta" /></div>}>
+            <LaserCalculator
+              products={products}
+              onAddToQuote={(item: any) => {
+                // Direct add to cart
+                const newItem: QuoteItem = {
+                  productId: `laser-${Date.now()}`,
+                  productName: item.productName,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice,
+                  subtotal: item.subtotal,
+                  width: item.width || 0,
+                  height: item.height || 0,
+                  manualPrice: item.subtotal // Lock price
+                };
+                setCart([...cart, newItem]);
+                setShowLaserCalc(false);
+                toast.success('Corte Laser adicionado!', {
+                  style: { background: '#10B981', color: 'white', border: 'none' }
+                });
+              }}
+            />
+          </React.Suspense>
         </div>
-      )}
+      </div>
+    </div>
+  )
+}
 
-      {
-        showIndicators && (
-          <IndicatorPanel
-            items={cart.map(item => ({ ...item, productName: products.find(p => p.id === item.productId)?.name || 'Produto' }))}
-            total={total}
-            designFee={designFee}
-            installFee={installFee}
-            config={finConfig}
-            onClose={() => setShowIndicators(false)}
-            onSave={handleFinalize}
-            isSaving={createQuoteMutation.isPending}
-          />
-        )
-      }
+{
+  showIndicators && (
+    <IndicatorPanel
+      items={cart.map(item => ({ ...item, productName: products.find(p => p.id === item.productId)?.name || 'Produto' }))}
+      total={total}
+      designFee={designFee}
+      installFee={installFee}
+      config={finConfig}
+      onClose={() => setShowIndicators(false)}
+      onSave={handleFinalize}
+      isSaving={createQuoteMutation.isPending}
+    />
+  )
+}
     </div >
   );
 };
