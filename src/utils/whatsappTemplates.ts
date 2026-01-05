@@ -23,9 +23,19 @@ export const generateMessage = (templateKey: keyof typeof WHATSAPP_TEMPLATES, da
     return encodeURIComponent(msg);
 };
 
+// Track the window reference outside the function scope (singleton module)
+let whatsappWindow: Window | null = null;
+
 export const openWhatsApp = (phone: string, message: string) => {
     // Removed formatting to avoid errors if phone is malformed, assuming basic digits
     const cleanPhone = phone.replace(/\D/g, '');
     const url = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${message}`;
-    window.open(url, 'whatsapp-session');
+
+    // Check if window exists and is not closed
+    if (whatsappWindow && !whatsappWindow.closed) {
+        whatsappWindow.location.href = url;
+        whatsappWindow.focus();
+    } else {
+        whatsappWindow = window.open(url, 'whatsapp-session');
+    }
 };

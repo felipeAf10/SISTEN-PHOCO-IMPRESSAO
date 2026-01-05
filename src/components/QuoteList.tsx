@@ -8,6 +8,7 @@ import {
 import { toast } from 'sonner';
 import { generateSalesPitch } from '../services/geminiService';
 import { api } from '../services/api';
+import { openWhatsApp } from '../utils/whatsappTemplates';
 
 interface QuoteListProps {
   quotes: Quote[];
@@ -123,8 +124,8 @@ const QuoteList: React.FC<QuoteListProps> = ({ quotes, setQuotes, customers, pro
     // Fixed: added currentUser.name as the 7th argument and quote.id as 8th
     const pitch = await generateSalesPitch(customer, itemsForPitch, quote.totalAmount, quote.designFee, quote.installFee, quote.deadlineDays, currentUser.name, quote.id);
     const phone = customer.phone.replace(/\D/g, '');
-    // Use named window to reuse tab, and prefer web.whatsapp.com to avoid redirect flicker
-    window.open(`https://web.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(pitch)}`, 'whatsapp-session');
+    // Reuse tab via helper
+    openWhatsApp(`55${phone}`, encodeURIComponent(pitch));
     if (quote.status === 'draft') handleStatusChange(quote.id, 'sent');
     setLoadingId(null);
   };
