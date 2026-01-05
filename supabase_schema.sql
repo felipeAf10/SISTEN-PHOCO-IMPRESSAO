@@ -37,7 +37,14 @@ create table if not exists quotes (
   install_fee numeric default 0,
   status text default 'draft',
   deadline_days numeric default 0,
-  notes text
+  deadline_days numeric default 0,
+  notes text,
+  discount numeric default 0,
+  payment_method text,
+  down_payment_method text,
+  user_id text references app_users(id),
+  commission_paid boolean default false,
+  commission_date text
 );
 
 -- Financial Config (Singleton)

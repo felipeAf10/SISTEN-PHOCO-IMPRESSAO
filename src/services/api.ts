@@ -1,8 +1,9 @@
 import { supabase } from '../lib/supabase';
-import { Product, Customer, Quote, FixedAsset, FixedCost, ScheduleEvent, AppView, User, TimeRecord } from '../../types';
+import { Product, Customer, Quote, FixedAsset, FixedCost, ScheduleEvent, AppView, User, TimeRecord, InventoryTransaction } from '../../types';
 
 export const api = {
     products: {
+
         list: async () => {
             const { data, error } = await supabase.from('products').select('*');
             if (error) throw error;
@@ -114,12 +115,24 @@ export const api = {
                 installFee:install_fee,
                 status,
                 deadlineDays:deadline_days,
-                notes
+
+                notes,
+                discount,
+                paymentMethod:payment_method,
+                downPaymentMethod:down_payment_method,
+                userId:user_id,
+                commissionPaid:commission_paid,
+                commissionDate:commission_date,
+                commissionPercent:commission_percent
             `);
             if (error) throw error;
             return data as Quote[];
         },
         create: async (quote: Quote) => {
+            // Fetch current commission config to snapshot
+            const { data: config } = await supabase.from('financial_config').select('commission_percent').single();
+            const currentCommission = config?.commission_percent || 0;
+
             const dbQuote = {
                 id: quote.id,
                 date: quote.date,
@@ -131,12 +144,26 @@ export const api = {
                 install_fee: quote.installFee,
                 status: quote.status,
                 deadline_days: quote.deadlineDays,
-                notes: quote.notes
+
+                notes: quote.notes,
+                discount: quote.discount,
+                payment_method: quote.paymentMethod,
+                down_payment_method: quote.downPaymentMethod,
+                user_id: quote.userId,
+                commission_paid: quote.commissionPaid,
+                commission_date: quote.commissionDate,
+                commission_percent: currentCommission // Snapshot
             };
             const { error } = await supabase.from('quotes').insert(dbQuote);
             if (error) throw error;
         },
         update: async (quote: Quote) => {
+            // Trigger Stock Deduction if moving to production
+            if (quote.status === 'production' && !quote.stockDeducted) {
+                await api.inventory.deductFromQuote(quote);
+                quote.stockDeducted = true;
+            }
+
             const dbQuote = {
                 id: quote.id,
                 date: quote.date,
@@ -148,9 +175,21 @@ export const api = {
                 install_fee: quote.installFee,
                 status: quote.status,
                 deadline_days: quote.deadlineDays,
-                notes: quote.notes
+
+                notes: quote.notes,
+                discount: quote.discount,
+                payment_method: quote.paymentMethod,
+                down_payment_method: quote.downPaymentMethod,
+                user_id: quote.userId,
+                commission_paid: quote.commissionPaid,
+                commission_date: quote.commissionDate,
+                stock_deducted: quote.stockDeducted
             };
             const { error } = await supabase.from('quotes').update(dbQuote).eq('id', quote.id);
+            if (error) throw error;
+        },
+        async updateStatus(id: string, status: string) {
+            const { error } = await supabase.from('quotes').update({ status }).eq('id', id);
             if (error) throw error;
         },
         delete: async (id: string) => {
@@ -283,6 +322,8 @@ export const api = {
             const dbUser = {
                 id: user.id,
                 name: user.name,
+                username: user.username,
+                password: user.password,
                 email: user.email,
                 role: user.role,
                 workload_hours: user.workloadHours,
@@ -297,6 +338,8 @@ export const api = {
             const dbUpdates: any = {};
             if (updates.name !== undefined) dbUpdates.name = updates.name;
             if (updates.email !== undefined) dbUpdates.email = updates.email;
+            if (updates.username !== undefined) dbUpdates.username = updates.username;
+            if (updates.password !== undefined) dbUpdates.password = updates.password;
             if (updates.role !== undefined) dbUpdates.role = updates.role;
             if (updates.workloadHours !== undefined) dbUpdates.workload_hours = updates.workloadHours;
             if (updates.workloadConfig !== undefined) dbUpdates.workload_config = updates.workloadConfig;
@@ -454,6 +497,89 @@ export const api = {
             if (error) throw error;
         }
     },
+    inventory: {
+        registerTransaction: async (transaction: Omit<InventoryTransaction, 'id'>, newStockValue?: number) => {
+            // 1. Update Database Stock
+            if (transaction.type === 'adjustment' && newStockValue !== undefined) {
+                // Set absolute stock
+                const { error } = await supabase.from('products').update({ stock: newStockValue }).eq('id', transaction.productId);
+                if (error) throw error;
+            } else {
+                // Increment/Decrement
+                // We need to fetch current again to be safe? Or rely on what we have? 
+                // Database increment is safer for concurrency but for now read-modify-write is okay for this scale
+                const { data: product, error: fetchError } = await supabase.from('products').select('stock').eq('id', transaction.productId).single();
+                if (fetchError) throw fetchError;
+
+                let change = transaction.quantity;
+                if (transaction.type === 'out') change = -transaction.quantity;
+
+                const currentStock = Number(product.stock) || 0;
+                const finalStock = currentStock + change;
+
+                const { error } = await supabase.from('products').update({ stock: finalStock }).eq('id', transaction.productId);
+                if (error) throw error;
+            }
+
+            // 2. Save Transaction Locally (as per plan, no DB table for transactions yet)
+            try {
+                const stored = localStorage.getItem('inventory_transactions');
+                const transactions = stored ? JSON.parse(stored) : [];
+                const newTransaction = { ...transaction, id: crypto.randomUUID() };
+                transactions.push(newTransaction);
+
+                // Keep last 100
+                if (transactions.length > 100) transactions.shift();
+
+                localStorage.setItem('inventory_transactions', JSON.stringify(transactions));
+                // Dispatch event so other components can update
+                window.dispatchEvent(new Event('inventory_update'));
+            } catch (e) {
+                console.warn("Failed to save local transaction log", e);
+            }
+        },
+        getHistory: () => {
+            try {
+                const stored = localStorage.getItem('inventory_transactions');
+                return stored ? JSON.parse(stored) : [];
+            } catch { return []; }
+        },
+        deductFromQuote: async (quote: Quote) => {
+            if (quote.stockDeducted) return;
+
+            console.log("Deducting stock for quote:", quote.id);
+
+            for (const item of quote.items) {
+                if (!item.productId) continue;
+
+                // Fetch product to know unit type
+                const { data: product } = await supabase.from('products').select('unit_type, name').eq('id', item.productId).single();
+                if (!product) continue;
+
+                let quantityToDeduct = item.quantity;
+
+                // Heuristic: If user sells m2, calculate area
+                if (['m2', 'm²', 'metro quadrado'].includes(product.unit_type?.toLowerCase())) {
+                    const widthM = (item.width || 0) / 100;
+                    const heightM = (item.height || 0) / 100;
+                    const area = widthM * heightM * item.quantity;
+                    if (area > 0) quantityToDeduct = area;
+                }
+
+                // Register transaction
+                await api.inventory.registerTransaction({
+                    productId: item.productId,
+                    quantity: quantityToDeduct,
+                    type: 'out',
+                    date: new Date().toISOString(),
+                    reason: `Produção Pedido #${quote.id.slice(0, 8)} - ${product.name}`
+                });
+            }
+
+            // Mark as deducted
+            await supabase.from('quotes').update({ stock_deducted: true }).eq('id', quote.id);
+        }
+    },
     storage: {
         uploadProof: async (path: string, file: File) => {
             return await supabase.storage.from('production-proofs').upload(path, file);
@@ -462,5 +588,77 @@ export const api = {
             const { data } = supabase.storage.from('production-proofs').getPublicUrl(path);
             return data.publicUrl;
         }
+    },
+    commissions: {
+        getBalance: async (userId: string) => {
+            // Calculate commission for all 'delivered' or 'finished' quotes that haven't been paid
+            const { data: quotes, error } = await supabase.from('quotes')
+                .select('active, status, total_amount, commission_paid, user_id, design_fee, install_fee, discount, commission_percent')
+                .eq('user_id', userId)
+                .in('status', ['delivered'])
+                .eq('commission_paid', false);
+
+            if (error) throw error;
+
+            // Fetch global config as fallback
+            const { data: config } = await supabase.from('financial_config').select('commission_percent').single();
+            const globalPercent = config?.commission_percent || 0;
+
+            let totalCommission = 0;
+            quotes?.forEach((q: any) => {
+                // Use Snapshot if available, else Global
+                const percent = q.commission_percent !== undefined && q.commission_percent !== null
+                    ? Number(q.commission_percent)
+                    : globalPercent;
+
+                const val = q.total_amount || 0;
+                totalCommission += val * (percent / 100);
+            });
+
+            return { totalCommission, pendingCount: quotes?.length || 0 };
+        },
+        listBalances: async () => {
+            // Admin view: List all users with their pending commission
+            // This is a bit complex in SQL, doing logic in JS for simplicity on small scale
+            const { data: quotes, error } = await supabase.from('quotes')
+                .select(`
+                    user_id, total_amount, status, commission_paid,
+                    app_users!inner(name, id)
+                `)
+                .in('status', ['delivered'])
+                .eq('commission_paid', false);
+
+            if (error) throw error;
+
+            const { data: config } = await supabase.from('financial_config').select('commission_percent').single();
+            const percent = config?.commission_percent || 0;
+
+            const balances: Record<string, { name: string, amount: number, count: number, userId: string }> = {};
+
+            quotes?.forEach((q: any) => {
+                const uid = q.user_id;
+                if (!uid) return;
+
+                if (!balances[uid]) {
+                    balances[uid] = { name: q.app_users.name, amount: 0, count: 0, userId: uid };
+                }
+
+                balances[uid].amount += (q.total_amount || 0) * (percent / 100);
+                balances[uid].count++;
+            });
+
+            return Object.values(balances);
+        },
+        pay: async (userId: string) => {
+            const today = new Date().toISOString();
+            const { error } = await supabase.from('quotes')
+                .update({ commission_paid: true, commission_date: today })
+                .eq('user_id', userId)
+                .in('status', ['delivered'])
+                .eq('commission_paid', false);
+
+            if (error) throw error;
+        }
     }
 };
+

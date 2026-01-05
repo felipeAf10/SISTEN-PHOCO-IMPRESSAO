@@ -1,4 +1,10 @@
 {
     "name": "phocoadmin",
-    "version": 2
+    "version": 2,
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
 }
