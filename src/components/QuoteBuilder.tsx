@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Plus, Search, UserPlus, MessageSquare, Sparkles, Loader2, Trash2, ShoppingCart,
   Layers, Paintbrush, Hammer, Copy, Check, Calculator, Info, X,
@@ -12,7 +12,7 @@ import { generateQuotePDF } from '../services/pdfService';
 import { generateSalesPitch, getVehicleMeasurements } from '../services/geminiService';
 import IndicatorPanel from './IndicatorPanel';
 import { api } from '../services/api';
-import { mapService } from '../services/mapService';
+import { mapService, loadGoogleMaps } from '../services/mapService';
 import LaserPriceModal from './LaserPriceModal';
 import StickerModal from './StickerModal';
 import AutomotiveModal from './AutomotiveModal';
@@ -20,6 +20,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Skeleton } from './ui/skeleton';
 const LaserCalculator = React.lazy(() => import('./LaserCalculator'));
+
+declare var google: any;
 
 interface QuoteBuilderProps {
   // Products/Customers/Quotes fetched internally now
@@ -144,6 +146,28 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
   }, [activeCategory, productSearch]);
 
   const [installAddress, setInstallAddress] = useState('');
+  const addressInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize Google Autocomplete
+  useEffect(() => {
+    loadGoogleMaps().then(() => {
+      if (!addressInputRef.current) return;
+      const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
+        types: ['address'],
+        fields: ['formatted_address', 'geometry'],
+        componentRestrictions: { country: 'br' }
+      });
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place.formatted_address) {
+          setInstallAddress(place.formatted_address);
+          // Optional: You could auto-calculate distance here if desired
+          // handleCalculateShipping(); 
+        }
+      });
+    });
+  }, []);
+
   const [shippingDist, setShippingDist] = useState<number | null>(null);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
 
@@ -712,6 +736,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
                   <div className="flex items-center gap-2 text-xs text-zinc-300 bg-black/20 p-2 rounded-lg border border-white/10 group focus-within:border-indigo-500/50 transition-colors">
                     <MapPin size={14} className="text-zinc-500 shrink-0" />
                     <input
+                      ref={addressInputRef}
                       type="text"
                       value={installAddress}
                       onChange={(e) => setInstallAddress(e.target.value)}

@@ -14,8 +14,9 @@ const ORIGIN_COORDS = { lat: ORIGIN_LAT, lng: ORIGIN_LON };
 const GOOGLE_API_KEY = 'AIzaSyCiq5OMzHemJaIFJrqIGDdB5TMblcbUs5M';
 
 // Helper to load Google Maps Script dynamically
+declare var google: any;
 let googleMapsPromise: Promise<void> | null = null;
-const loadGoogleMaps = () => {
+export const loadGoogleMaps = () => {
     if (googleMapsPromise) return googleMapsPromise;
 
     googleMapsPromise = new Promise((resolve, reject) => {
@@ -25,7 +26,7 @@ const loadGoogleMaps = () => {
         }
 
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=geometry`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=geometry,places`;
         script.async = true;
         script.defer = true;
         script.onload = () => resolve();
