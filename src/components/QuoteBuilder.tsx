@@ -156,38 +156,47 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
   }, [selectedCustomerId, customers]);
 
   const handleCalculateShipping = async () => {
-    if (!installAddress) return toast.error('Digite um endereço para calcular');
-    setIsCalculatingShipping(true);
-
-    // 1. Geocode Destination
-    const results = await mapService.searchAddress(installAddress);
-    if (!results || results.length === 0) {
-      toast.error('Endereço não encontrado');
-      setIsCalculatingShipping(false);
+    if (!installAddress) {
+      toast.error('Digite um endereço para calcular');
       return;
     }
-    const dest = results[0];
 
-    // 2. Calculate Distance
-    const distKm = await mapService.getDistance(dest.lat, dest.lon);
+    setIsCalculatingShipping(true);
 
-    if (distKm !== null) {
-      setShippingDist(distKm);
-      const pricePerKm = finConfig.pricePerKm || 2; // Default fallback
-      const fixedFee = finConfig.fixedLogisticsFee || 0;
-      const shippingCost = (distKm * pricePerKm) + fixedFee;
+    try {
+      // 1. Geocode Destination
+      const results = await mapService.searchAddress(installAddress);
 
-      // Update Install Fee (Add to existing or replace? "Com base na distancia" implies it IS the fee or part of it. 
-      // I'll set it as the fee, but warn user)
-      setInstallFee(prev => {
-        const newFee = Math.ceil(shippingCost); // Round up
-        toast.success(`Distância: ${distKm.toFixed(1)} km.Frete sugerido: R$ ${newFee} `);
-        return newFee;
-      });
-    } else {
-      toast.error('Erro ao calcular rota');
+      if (!results || results.length === 0) {
+        toast.error('Endereço não encontrado');
+        return;
+      }
+
+      const dest = results[0];
+
+      // 2. Calculate Distance
+      const distKm = await mapService.getDistance(dest.lat, dest.lon);
+
+      if (distKm !== null) {
+        setShippingDist(distKm);
+        const pricePerKm = finConfig.pricePerKm || 2;
+        const fixedFee = finConfig.fixedLogisticsFee || 0;
+        const shippingCost = (distKm * pricePerKm) + fixedFee;
+
+        setInstallFee(prev => {
+          const newFee = Math.ceil(shippingCost);
+          toast.success(`Distância: ${distKm.toFixed(1)} km. Frete: R$ ${newFee}`);
+          return newFee;
+        });
+      } else {
+        toast.error('Erro ao calcular rota (Endereço muito distante ou inválido)');
+      }
+    } catch (error) {
+      console.error("Shipping Calculation Error:", error);
+      toast.error('Erro ao conectar com Google Maps');
+    } finally {
+      setIsCalculatingShipping(false);
     }
-    setIsCalculatingShipping(false);
   };
 
   // Hydrate from initialQuote if provided (Edit Mode)
