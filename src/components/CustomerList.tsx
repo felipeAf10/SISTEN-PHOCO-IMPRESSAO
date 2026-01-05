@@ -1,11 +1,14 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Edit2, Trash2, User, Phone, Mail, MapPin, X, Search, ShoppingBag } from 'lucide-react';
 import { Customer, Quote } from '../types';
 import { api } from '../services/api';
+import { loadGoogleMaps } from '../services/mapService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Skeleton } from './ui/skeleton';
+
+declare var google: any;
 
 interface CustomerListProps {
   // customers and setCustomers are no longer needed as we fetch internally
@@ -31,7 +34,34 @@ const CustomerList: React.FC<CustomerListProps> = ({ initialSearch = '' }) => {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedHistoryCustomer, setSelectedHistoryCustomer] = useState<Customer | null>(null);
   const [customerQuotes, setCustomerQuotes] = useState<Quote[]>([]);
+
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const addressInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize Google Autocomplete
+  useEffect(() => {
+    if (isModalOpen) {
+      loadGoogleMaps().then(() => {
+        setTimeout(() => {
+          if (!addressInputRef.current) return;
+
+          const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
+            types: ['address'],
+            fields: ['formatted_address', 'geometry'],
+            componentRestrictions: { country: 'br' }
+          });
+
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (place.formatted_address) {
+              setFormData(prev => ({ ...prev, address: place.formatted_address }));
+            }
+          });
+        }, 100);
+      });
+    }
+  }, [isModalOpen]);
 
   // FETCH CUSTOMERS
   const { data: customers = [], isLoading } = useQuery({
@@ -283,11 +313,13 @@ const CustomerList: React.FC<CustomerListProps> = ({ initialSearch = '' }) => {
               </div>
               <div>
                 <label className="block text-[10px] font-black text-secondary uppercase tracking-widest mb-1">Endereço</label>
-                <textarea
-                  rows={2}
+                <input
+                  ref={addressInputRef}
+                  type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-5 py-3 bg-input border border-white/5 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-primary"
+                  className="w-full px-5 py-3 bg-input border border-white/5 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-primary"
+                  placeholder="Digite para buscar o endereço..."
                 />
               </div>
               <div className="pt-4 flex gap-3">
