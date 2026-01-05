@@ -1,4 +1,5 @@
 
+// OpenStreetMap / OSRM Service
 interface GeoResult {
     lat: string;
     lon: string;
@@ -9,82 +10,65 @@ interface GeoResult {
 // Av. João Gomes Cardoso, 435 - Jardim Laguna, Contagem - MG
 const ORIGIN_LAT = -19.9248;
 const ORIGIN_LON = -44.1485;
-const ORIGIN_COORDS = { lat: ORIGIN_LAT, lng: ORIGIN_LON };
 
-const GOOGLE_API_KEY = 'AIzaSyCiq5OMzHemJaIFJrqIGDdB5TMblcbUs5M';
-
-// Helper to load Google Maps Script dynamically
-declare var google: any;
-let googleMapsPromise: Promise<void> | null = null;
-export const loadGoogleMaps = () => {
-    if (googleMapsPromise) return googleMapsPromise;
-
-    googleMapsPromise = new Promise((resolve, reject) => {
-        if (typeof window.google === 'object' && typeof window.google.maps === 'object') {
-            resolve();
-            return;
-        }
-
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=geometry,places`;
-        script.async = true;
-        script.defer = true;
-        script.onload = () => resolve();
-        script.onerror = (err) => reject(err);
-        document.head.appendChild(script);
-    });
-    return googleMapsPromise;
-};
+export const loadGoogleMaps = () => Promise.resolve(); // No-op for compatibility
 
 export const mapService = {
-    // Search using Google Maps Geocoder (Client Side)
+    // Search using Nominatim (OpenStreetMap)
     async searchAddress(query: string): Promise<GeoResult[]> {
-        try {
-            await loadGoogleMaps();
-            const geocoder = new google.maps.Geocoder();
+        if (!query || query.length < 3) return [];
 
-            const response = await geocoder.geocode({
-                address: query,
-                region: 'br',
-                componentRestrictions: { country: 'BR' }
+        try {
+            // Clean query
+            const cleanQuery = query.replace(/[^\w\s,-]/g, ' ').trim();
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=br&limit=5&addressdetails=1`;
+
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'PriceFlow/1.0',
+                    'Accept-Language': 'pt-BR'
+                }
             });
 
-            if (response.results && response.results.length > 0) {
-                return response.results.map(r => ({
-                    lat: r.geometry.location.lat().toString(),
-                    lon: r.geometry.location.lng().toString(),
-                    display_name: r.formatted_address
-                }));
-            }
-            return [];
+            if (!response.ok) throw new Error('Nominatim Error');
+
+            const data = await response.json();
+            return data.map((item: any) => ({
+                lat: item.lat,
+                lon: item.lon,
+                display_name: item.display_name
+            }));
         } catch (error) {
-            console.error('Google Maps Geocoder Error:', error);
+            console.error('Nominatim Search Error:', error);
             return [];
         }
     },
 
-    // Calculate distance using Distance Matrix Service
+    // Alias for autocomplete behavior, using the same Nominatim endpoint
+    async searchAddressAutocomplete(query: string): Promise<GeoResult[]> {
+        return this.searchAddress(query);
+    },
+
+    // Calculate distance using OSRM (Open Source Routing Machine)
     async getDistance(destLat: string, destLon: string): Promise<number | null> {
         try {
-            await loadGoogleMaps();
-            const service = new google.maps.DistanceMatrixService();
-            const destCoords = { lat: parseFloat(destLat), lng: parseFloat(destLon) };
+            // OSRM Public API (Demo server - respectful usage required)
+            // Route: origin -> destination
+            const url = `https://router.project-osrm.org/route/v1/driving/${ORIGIN_LON},${ORIGIN_LAT};${destLon},${destLat}?overview=false`;
 
-            const response = await service.getDistanceMatrix({
-                origins: [ORIGIN_COORDS],
-                destinations: [destCoords],
-                travelMode: google.maps.TravelMode.DRIVING,
-                unitSystem: google.maps.UnitSystem.METRIC
-            });
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('OSRM Error');
 
-            if (response.rows[0].elements[0].status === 'OK') {
-                // Returns distance in KM
-                return response.rows[0].elements[0].distance.value / 1000;
+            const data = await response.json();
+
+            if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                const distanceMeters = data.routes[0].distance;
+                return distanceMeters / 1000; // Returns in KM
             }
 
             return null;
         } catch (error) {
-            console.error('Google Maps Distance Matrix Error:', error);
+            console.error('OSRM Distance Error:', error);
             return null;
         }
     }

@@ -1,14 +1,14 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Edit2, Trash2, User, Phone, Mail, MapPin, X, Search, ShoppingBag } from 'lucide-react';
+import { Plus, Edit2, Trash2, User, Phone, Mail, MapPin, X, Search, ShoppingBag, Loader2 } from 'lucide-react';
 import { Customer, Quote } from '../types';
 import { api } from '../services/api';
-import { loadGoogleMaps } from '../services/mapService';
+import { mapService } from '../services/mapService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Skeleton } from './ui/skeleton';
 
-declare var google: any;
+
 
 interface CustomerListProps {
   // customers and setCustomers are no longer needed as we fetch internally
@@ -39,29 +39,47 @@ const CustomerList: React.FC<CustomerListProps> = ({ initialSearch = '' }) => {
 
   const addressInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize Google Autocomplete
-  useEffect(() => {
-    if (isModalOpen) {
-      loadGoogleMaps().then(() => {
-        setTimeout(() => {
-          if (!addressInputRef.current) return;
+  // Custom Autocomplete State
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-          const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
-            types: ['address'],
-            fields: ['formatted_address', 'geometry'],
-            componentRestrictions: { country: 'br' }
-          });
+  const handleAddressSearch = (text: string) => {
+    setFormData(prev => ({ ...prev, address: text }));
 
-          autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace();
-            if (place.formatted_address) {
-              setFormData(prev => ({ ...prev, address: place.formatted_address }));
-            }
-          });
-        }, 100);
-      });
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
+    if (text.length < 3) {
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
+      return;
     }
-  }, [isModalOpen]);
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearchingAddress(true);
+      const results = await mapService.searchAddressAutocomplete(text);
+      setAddressSuggestions(results);
+      setShowSuggestions(true);
+      setIsSearchingAddress(false);
+    }, 500);
+  };
+
+  const handleSelectAddress = (addr: any) => {
+    setFormData(prev => ({ ...prev, address: addr.display_name }));
+    setShowSuggestions(false);
+  };
+
+  // Close suggestions on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (addressInputRef.current && !addressInputRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // FETCH CUSTOMERS
   const { data: customers = [], isLoading } = useQuery({
@@ -313,14 +331,34 @@ const CustomerList: React.FC<CustomerListProps> = ({ initialSearch = '' }) => {
               </div>
               <div>
                 <label className="block text-[10px] font-black text-secondary uppercase tracking-widest mb-1">Endereço</label>
-                <input
-                  ref={addressInputRef}
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-5 py-3 bg-input border border-white/5 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-primary"
-                  placeholder="Digite para buscar o endereço..."
-                />
+                <div className="relative">
+                  <input
+                    ref={addressInputRef}
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => handleAddressSearch(e.target.value)}
+                    onFocus={() => addressSuggestions.length > 0 && setShowSuggestions(true)}
+                    className="w-full px-5 py-3 bg-input border border-white/5 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-primary pr-10"
+                    placeholder="Digite para buscar o endereço..."
+                  />
+                  {isSearchingAddress && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 size={16} className="animate-spin text-indigo-500" /></div>}
+
+                  {/* Suggestions Dropdown */}
+                  {showSuggestions && addressSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden max-h-48 overflow-y-auto">
+                      {addressSuggestions.map((addr, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSelectAddress(addr)}
+                          className="w-full text-left px-4 py-3 hover:bg-white/5 text-xs text-zinc-300 border-b border-white/5 last:border-0 transition-colors"
+                        >
+                          {addr.display_name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-4 border border-white/10 text-secondary font-black uppercase text-[10px] tracking-widest rounded-2xl hover:bg-white/5 transition-all">Cancelar</button>

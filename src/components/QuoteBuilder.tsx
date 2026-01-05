@@ -148,30 +148,49 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
   const [installAddress, setInstallAddress] = useState('');
   const addressInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize Google Autocomplete
-  useEffect(() => {
-    if (sidebarTab === 'checkout') {
-      loadGoogleMaps().then(() => {
-        // Double check ref availability after a small tick to ensure DOM render
-        setTimeout(() => {
-          if (!addressInputRef.current) return;
+  // Custom Autocomplete State
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-          const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
-            types: ['address'],
-            fields: ['formatted_address', 'geometry'],
-            componentRestrictions: { country: 'br' }
-          });
+  const handleAddressSearch = (text: string) => {
+    setInstallAddress(text);
 
-          autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace();
-            if (place.formatted_address) {
-              setInstallAddress(place.formatted_address);
-            }
-          });
-        }, 100);
-      });
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
+    if (text.length < 3) {
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
+      return;
     }
-  }, [sidebarTab]);
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearchingAddress(true);
+      const results = await mapService.searchAddressAutocomplete(text);
+      setAddressSuggestions(results);
+      setShowSuggestions(true);
+      setIsSearchingAddress(false);
+    }, 500); // 500ms debounce
+  };
+
+  const handleSelectAddress = (addr: any) => {
+    setInstallAddress(addr.display_name);
+    setShowSuggestions(false);
+    // Auto-calculate distance on select
+    handleCalculateShipping(addr.display_name);
+  };
+
+  // Close suggestions on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (addressInputRef.current && !addressInputRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const [shippingDist, setShippingDist] = useState<number | null>(null);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
@@ -184,8 +203,11 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
     }
   }, [selectedCustomerId, customers]);
 
-  const handleCalculateShipping = async () => {
-    if (!installAddress) {
+  // Updated to allow direct calc from selection
+  const handleCalculateShipping = async (addressOverride?: string) => {
+    const queryAddress = addressOverride || installAddress;
+
+    if (!queryAddress) {
       toast.error('Digite um endereço para calcular');
       return;
     }
@@ -193,8 +215,8 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
     setIsCalculatingShipping(true);
 
     try {
-      // 1. Geocode Destination
-      const results = await mapService.searchAddress(installAddress);
+      // 1. Geocode Destination (Nominatim)
+      const results = await mapService.searchAddress(queryAddress);
 
       if (!results || results.length === 0) {
         toast.error('Endereço não encontrado');
@@ -203,7 +225,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
 
       const dest = results[0];
 
-      // 2. Calculate Distance
+      // 2. Calculate Distance (OSRM)
       const distKm = await mapService.getDistance(dest.lat, dest.lon);
 
       if (distKm !== null) {
@@ -218,11 +240,11 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
           return newFee;
         });
       } else {
-        toast.error('Erro ao calcular rota (Endereço muito distante ou inválido)');
+        toast.error('Erro ao calcular rota (OSRM)');
       }
     } catch (error) {
       console.error("Shipping Calculation Error:", error);
-      toast.error('Erro ao conectar com Google Maps');
+      toast.error('Erro ao conectar com serviço de mapas');
     } finally {
       setIsCalculatingShipping(false);
     }
@@ -738,17 +760,34 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
                   </div>
 
                   {/* Address Input */}
-                  <div className="flex items-center gap-2 text-xs text-zinc-300 bg-black/20 p-2 rounded-lg border border-white/10 group focus-within:border-indigo-500/50 transition-colors">
+                  <div className="flex items-center gap-2 text-xs text-zinc-300 bg-black/20 p-2 rounded-lg border border-white/10 group focus-within:border-indigo-500/50 transition-colors relative">
                     <MapPin size={14} className="text-zinc-500 shrink-0" />
                     <input
                       ref={addressInputRef}
                       type="text"
                       value={installAddress}
-                      onChange={(e) => setInstallAddress(e.target.value)}
+                      onChange={(e) => handleAddressSearch(e.target.value)}
+                      onFocus={() => addressSuggestions.length > 0 && setShowSuggestions(true)}
                       className="bg-transparent border-none outline-none flex-1 w-full placeholder-zinc-600 truncate"
-                      placeholder="Endereço de entrega..."
+                      placeholder="Buscar Endereço (Grátis)..."
                     />
+                    {isSearchingAddress && <Loader2 size={12} className="animate-spin text-indigo-500" />}
                     {shippingDist !== null && <span className="font-bold text-indigo-400 whitespace-nowrap shrink-0 text-[10px] bg-indigo-500/10 px-1.5 py-0.5 rounded">{shippingDist.toFixed(1)} km</span>}
+
+                    {/* Custom Suggestions Dropdown */}
+                    {showSuggestions && addressSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
+                        {addressSuggestions.map((addr, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleSelectAddress(addr)}
+                            className="w-full text-left px-3 py-2 hover:bg-white/5 text-[10px] text-zinc-300 border-b border-white/5 last:border-0 transition-colors"
+                          >
+                            {addr.display_name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Address Fees Row */}
@@ -776,7 +815,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
                           <span className="text-[10px] text-zinc-500">R$</span>
                           <input type="number" value={installFee} onChange={(e) => setInstallFee(parseFloat(e.target.value) || 0)} className="w-16 bg-transparent text-right font-bold text-white outline-none text-xs border-b border-white/10 focus:border-indigo-500" placeholder="0.00" />
                         </div>
-                        <button onClick={handleCalculateShipping} disabled={isCalculatingShipping || !installAddress} className="p-1 hover:bg-indigo-500 hover:text-white rounded text-indigo-500 transition-colors" title="Calcular Frete">
+                        <button onClick={() => handleCalculateShipping()} disabled={isCalculatingShipping || !installAddress} className="p-1 hover:bg-indigo-500 hover:text-white rounded text-indigo-500 transition-colors" title="Calcular Frete">
                           {isCalculatingShipping ? <Loader2 size={12} className="animate-spin" /> : <Calculator size={12} />}
                         </button>
                       </div>
