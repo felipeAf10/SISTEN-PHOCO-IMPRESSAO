@@ -22,10 +22,15 @@ export const mapService = {
             // Clean query
             // Clean query
             const cleanQuery = query.replace(/[^\w\s,-]/g, ' ').trim();
-            // Viewbox for Minas Gerais/Sudeste preference
-            // x1 (lon left), y1 (lat top), x2 (lon right), y2 (lat bottom)
-            const viewbox = '-51.5,-13.5,-39.5,-23.5'; // Approx box covering MG
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=br&limit=5&addressdetails=1&viewbox=${viewbox}&bounded=1`;
+
+            // STRICTER Viewbox for Greater BH/Contagem (Excluding Rio de Janeiro)
+            // Rio is Lat -22.9, so we cut off at -22.0
+            const viewbox = '-46.0,-18.0,-42.0,-22.0';
+
+            // Append context to hep Nominatim
+            const contextualizedQuery = `${cleanQuery}, Minas Gerais`;
+
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(contextualizedQuery)}&countrycodes=br&limit=5&addressdetails=1&viewbox=${viewbox}&bounded=1`;
 
             const response = await fetch(url, {
                 headers: {
