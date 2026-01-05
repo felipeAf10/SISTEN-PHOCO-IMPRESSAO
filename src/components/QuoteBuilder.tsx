@@ -150,23 +150,28 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
 
   // Initialize Google Autocomplete
   useEffect(() => {
-    loadGoogleMaps().then(() => {
-      if (!addressInputRef.current) return;
-      const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
-        types: ['address'],
-        fields: ['formatted_address', 'geometry'],
-        componentRestrictions: { country: 'br' }
+    if (sidebarTab === 'checkout') {
+      loadGoogleMaps().then(() => {
+        // Double check ref availability after a small tick to ensure DOM render
+        setTimeout(() => {
+          if (!addressInputRef.current) return;
+
+          const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
+            types: ['address'],
+            fields: ['formatted_address', 'geometry'],
+            componentRestrictions: { country: 'br' }
+          });
+
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (place.formatted_address) {
+              setInstallAddress(place.formatted_address);
+            }
+          });
+        }, 100);
       });
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (place.formatted_address) {
-          setInstallAddress(place.formatted_address);
-          // Optional: You could auto-calculate distance here if desired
-          // handleCalculateShipping(); 
-        }
-      });
-    });
-  }, []);
+    }
+  }, [sidebarTab]);
 
   const [shippingDist, setShippingDist] = useState<number | null>(null);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
