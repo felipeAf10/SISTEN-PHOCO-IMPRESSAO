@@ -667,10 +667,12 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
                </div>
              )}
 
-             <div className="grid grid-cols-2 gap-3">
+             <div className="grid grid-cols-1 gap-3">
                {/* Design Fee */}
                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-secondary uppercase tracking-widest pl-1">Taxa de Arte</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-[9px] font-black text-secondary uppercase tracking-widest pl-1">🎨 Taxa de Arte</label>
+                  </div>
                   <div className="relative group">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-indigo-400 transition-colors">
                       <Paintbrush size={14} />
@@ -689,7 +691,9 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
 
                {/* Installation Fee with Integrated Calc */}
                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-secondary uppercase tracking-widest pl-1">Instalação / Frete</label>
+                  <div className="flex justify-between items-center">
+                     <label className="text-[9px] font-black text-secondary uppercase tracking-widest pl-1">🚚 Frete & Instalação</label>
+                  </div>
                   <div className="relative flex rounded-xl border border-white/10 bg-input focus-within:ring-2 focus-within:ring-indigo-500/50 transition-all overflow-hidden group">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-indigo-400 transition-colors">
                       <Truck size={14} />
