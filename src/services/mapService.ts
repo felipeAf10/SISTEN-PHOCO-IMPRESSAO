@@ -28,7 +28,16 @@ export const mapService = {
             const viewbox = '-47.0,-16.0,-41.0,-23.0';
 
             // Standard Nominatim Search
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=br&limit=5&addressdetails=1&viewbox=${viewbox}&bounded=0`;
+            // If attempt > 1 (AI Refined), we REMOVE restrictions to ensure we find the specific address provided by AI
+            let url = '';
+
+            if (attempt === 1) {
+                // First try: Prefer local results
+                url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=br&limit=5&addressdetails=1&viewbox=${viewbox}&bounded=0`;
+            } else {
+                // Second try (AI corrected): Trust the text completely, no geographic bias needed
+                url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=br&limit=5&addressdetails=1`;
+            }
 
             const response = await fetch(url, {
                 headers: {
@@ -50,6 +59,7 @@ export const mapService = {
             // If no results and it's the first attempt, try to refine with AI
             if (results.length === 0 && attempt === 1) {
                 console.log(`[SmartSearch] No results for "${query}". Asking AI...`);
+                // Add explicit instructions to AI to be robust
                 const refined = await refineAddress(query);
 
                 if (refined && refined !== query) {
