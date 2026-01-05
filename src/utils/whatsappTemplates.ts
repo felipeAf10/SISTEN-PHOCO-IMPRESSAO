@@ -26,6 +26,6 @@ export const generateMessage = (templateKey: keyof typeof WHATSAPP_TEMPLATES, da
 export const openWhatsApp = (phone: string, message: string) => {
     // Removed formatting to avoid errors if phone is malformed, assuming basic digits
     const cleanPhone = phone.replace(/\D/g, '');
-    const url = `https://wa.me/${cleanPhone}?text=${message}`;
-    window.open(url, '_blank');
+    const url = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${message}`;
+    window.open(url, 'whatsapp-session');
 };

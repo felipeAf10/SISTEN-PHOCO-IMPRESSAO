@@ -123,7 +123,8 @@ const QuoteList: React.FC<QuoteListProps> = ({ quotes, setQuotes, customers, pro
     // Fixed: added currentUser.name as the 7th argument and quote.id as 8th
     const pitch = await generateSalesPitch(customer, itemsForPitch, quote.totalAmount, quote.designFee, quote.installFee, quote.deadlineDays, currentUser.name, quote.id);
     const phone = customer.phone.replace(/\D/g, '');
-    window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(pitch)}`, '_blank');
+    // Use named window to reuse tab, and prefer web.whatsapp.com to avoid redirect flicker
+    window.open(`https://web.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(pitch)}`, 'whatsapp-session');
     if (quote.status === 'draft') handleStatusChange(quote.id, 'sent');
     setLoadingId(null);
   };
