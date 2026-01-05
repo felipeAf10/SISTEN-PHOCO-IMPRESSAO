@@ -77,6 +77,9 @@ export interface FinancialConfig {
   commissionPercent: number;
   targetProfitMargin: number;
   hourlyRate?: number; // Calculated: (Fixed Costs + Deprec) / Hours
+  pricePerKm?: number;
+  fixedLogisticsFee?: number;
+  originAddress?: string;
 }
 
 export interface Customer {

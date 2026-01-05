@@ -12,6 +12,7 @@ import { generateQuotePDF } from '../services/pdfService';
 import { generateSalesPitch, getVehicleMeasurements } from '../services/geminiService';
 import IndicatorPanel from './IndicatorPanel';
 import { api } from '../services/api';
+import { mapService } from '../services/mapService';
 import LaserPriceModal from './LaserPriceModal';
 import StickerModal from './StickerModal';
 import AutomotiveModal from './AutomotiveModal';
@@ -140,6 +141,53 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
   useEffect(() => {
     setCurrentPage(1);
   }, [activeCategory, productSearch]);
+
+  const [installAddress, setInstallAddress] = useState('');
+  const [shippingDist, setShippingDist] = useState<number | null>(null);
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+
+  // Auto-fill address from customer
+  useEffect(() => {
+    if (selectedCustomerId) {
+      const cust = customers.find(c => c.id === selectedCustomerId);
+      if (cust) setInstallAddress(cust.address);
+    }
+  }, [selectedCustomerId, customers]);
+
+  const handleCalculateShipping = async () => {
+    if (!installAddress) return toast.error('Digite um endereço para calcular');
+    setIsCalculatingShipping(true);
+
+    // 1. Geocode Destination
+    const results = await mapService.searchAddress(installAddress);
+    if (!results || results.length === 0) {
+      toast.error('Endereço não encontrado');
+      setIsCalculatingShipping(false);
+      return;
+    }
+    const dest = results[0];
+
+    // 2. Calculate Distance
+    const distKm = await mapService.getDistance(dest.lat, dest.lon);
+
+    if (distKm !== null) {
+      setShippingDist(distKm);
+      const pricePerKm = finConfig.pricePerKm || 2; // Default fallback
+      const fixedFee = finConfig.fixedLogisticsFee || 0;
+      const shippingCost = (distKm * pricePerKm) + fixedFee;
+
+      // Update Install Fee (Add to existing or replace? "Com base na distancia" implies it IS the fee or part of it. 
+      // I'll set it as the fee, but warn user)
+      setInstallFee(prev => {
+        const newFee = Math.ceil(shippingCost); // Round up
+        toast.success(`Distância: ${distKm.toFixed(1)}km. Frete sugerido: R$ ${newFee}`);
+        return newFee;
+      });
+    } else {
+      toast.error('Erro ao calcular rota');
+    }
+    setIsCalculatingShipping(false);
+  };
 
   // Hydrate from initialQuote if provided (Edit Mode)
   useEffect(() => {
@@ -605,6 +653,68 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
                 );
               })
             )}
+          </div>
+
+          {/* Additional Fees (Design, Installation, Shipping) */}
+          <div className="p-4 bg-surface/50 border-t border-white/5 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Design Fee */}
+              <div>
+                <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1">Taxa de Arte / Design</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-xs">R$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={designFee}
+                    onChange={(e) => setDesignFee(parseFloat(e.target.value) || 0)}
+                    className="w-full bg-input border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-xs font-bold text-white focus:ring-1 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Installation Fee */}
+              <div>
+                <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1">Instalação / Frete</label>
+                <div className="relative flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-xs">R$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={installFee}
+                      onChange={(e) => setInstallFee(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-input border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-xs font-bold text-white focus:ring-1 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+
+                  {/* Shipping Calculator Button */}
+                  <button
+                    onClick={handleCalculateShipping}
+                    disabled={isCalculatingShipping || !installAddress}
+                    className="px-3 bg-surface-hover hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-xl transition-all flex items-center justify-center disabled:opacity-50"
+                    title={installAddress ? `Calcular frete para: ${installAddress}` : "Selecione um cliente com endereço"}
+                  >
+                    {isCalculatingShipping ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
+                  </button>
+                </div>
+                {shippingDist !== null && (
+                  <p className="text-[9px] text-indigo-300 mt-1 font-medium flex items-center gap-1">
+                    <Check size={10} /> Distância: {shippingDist.toFixed(1)}km
+                  </p>
+                )}
+              </div>
+
+              {/* Address Display (Read Only) */}
+              <div className="hidden lg:block opacity-70">
+                <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1">Endereço de Entrega</label>
+                <p className="text-[10px] text-zinc-400 truncate bg-white/5 p-2.5 rounded-xl border border-white/5">
+                  {installAddress || 'Selecione um cliente para carregar endereço'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Totals & Actions */}

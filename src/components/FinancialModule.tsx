@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Calculator, Timer, TrendingUp, Wallet, Users, Edit2, Check, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Calculator, Timer, TrendingUp, Wallet, Users, Edit2, Check, Loader2, Truck, Flag } from 'lucide-react';
 import { Quote, FixedAsset, FixedCost, FinancialConfig } from '../types';
 import { api } from '../services/api';
 import ProfitabilityDashboard from './ProfitabilityDashboard';
@@ -473,6 +473,32 @@ const FinancialConfigForm: React.FC<{ config: FinancialConfig, onSave: (c: Finan
             />
           </div>
           <p className="text-[10px] text-zinc-500">Lucro desejado sobre o custo</p>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase text-secondary tracking-widest">Preço por Km (Frete)</label>
+          <div className="relative">
+            <Truck className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} />
+            <input
+              type="number"
+              value={localConfig.pricePerKm || 0}
+              onChange={e => setLocalConfig({ ...localConfig, pricePerKm: Number(e.target.value) })}
+              className="w-full pl-12 pr-4 py-4 bg-input border border-white/10 rounded-xl font-bold text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase text-secondary tracking-widest">Taxa Fixa de Saída</label>
+          <div className="relative">
+            <Flag className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} />
+            <input
+              type="number"
+              value={localConfig.fixedLogisticsFee || 0}
+              onChange={e => setLocalConfig({ ...localConfig, fixedLogisticsFee: Number(e.target.value) })}
+              className="w-full pl-12 pr-4 py-4 bg-input border border-white/10 rounded-xl font-bold text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+          </div>
         </div>
       </div>
 
