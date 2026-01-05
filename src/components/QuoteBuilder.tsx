@@ -4,7 +4,7 @@ import {
   Layers, Paintbrush, Hammer, Copy, Check, Calculator, Info, X,
   Clock, Zap, Star, LayoutGrid, List, ChevronRight, Image as ImageIcon,
   Sticker, Flag, Gift, HardHat, Tv, Type, Files, Printer, Wrench, Shirt, Package,
-  Maximize2, ArrowRight, ClipboardCheck, Ruler, Truck, Scissors, Sparkle, Car, ShieldAlert, FileText, Settings, Share2
+  Maximize2, ArrowRight, ClipboardCheck, Ruler, Truck, Scissors, Sparkle, Car, ShieldAlert, FileText, Settings, Share2, MapPin, DollarSign
 } from 'lucide-react';
 import { Product, Customer, Quote, QuoteItem, QuoteStatus, FinancialConfig, User } from '../types';
 import { generateQuotePDF } from '../services/pdfService';
@@ -60,6 +60,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
   const [generatedPitch, setGeneratedPitch] = useState<string>('');
   const [generatedQuoteId, setGeneratedQuoteId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'items' | 'checkout'>('items');
 
   const [designFee, setDesignFee] = useState(0);
   const [installFee, setInstallFee] = useState(0);
@@ -559,321 +560,286 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
         </div>
       </div>
 
-      {/* Cart Sidebar */}
+      {/* Tabbed Cart Sidebar */}
       <div className="lg:col-span-3">
-        <div className="glass-nav rounded-2xl border border-white/5 shadow-xl sticky top-6 overflow-hidden flex flex-col max-h-[calc(100vh-3rem)]">
-          <div className="p-4 bg-surface text-primary flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <ShoppingCart size={18} className="text-emerald-400" />
-              <span className="font-black uppercase tracking-widest text-xs">Itens do Orçamento</span>
-            </div>
-            <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] font-bold">{cart.length}</span>
-          </div>
+        <div className="glass-nav rounded-2xl border border-white/5 shadow-xl sticky top-6 flex flex-col max-h-[calc(100vh-3rem)] overflow-hidden bg-surface">
 
-          {/* Customer Select */}
-          <div className="p-4 border-b border-white/5 bg-surface/30">
-            <label className="block text-[10px] font-black uppercase text-secondary tracking-widest mb-2">Cliente</label>
-            <select
-              value={selectedCustomerId}
-              onChange={(e) => setSelectedCustomerId(e.target.value)}
-              className="w-full p-2.5 bg-input border border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-cyan-500 outline-none text-primary"
+          {/* Tab Switcher */}
+          <div className="flex border-b border-white/5">
+            <button
+              onClick={() => setSidebarTab('items')}
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${sidebarTab === 'items' ? 'bg-surface-active text-cyan-400 border-b-2 border-cyan-400' : 'bg-transparent text-secondary hover:text-white hover:bg-white/5'}`}
             >
-              <option value="">Selecione um cliente...</option>
-              {customers.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+              <span className="flex items-center justify-center gap-2"><ShoppingCart size={14} /> Itens ({cart.length})</span>
+            </button>
+            <button
+              onClick={() => setSidebarTab('checkout')}
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${sidebarTab === 'checkout' ? 'bg-surface-active text-emerald-400 border-b-2 border-emerald-400' : 'bg-transparent text-secondary hover:text-white hover:bg-white/5'}`}
+            >
+              <span className="flex items-center justify-center gap-2"><Check size={14} /> Fechamento</span>
+            </button>
           </div>
 
-          {/* Cart Items with Promo/Edit Feature */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-            {cart.length === 0 ? (
-              <div className="text-center py-10 opacity-50">
-                <ShoppingCart size={40} className="mx-auto mb-3 text-secondary" />
-                <p className="text-xs font-bold text-secondary uppercase tracking-wider">Carrinho Vazio</p>
+          {/* TAB: ITEMS */}
+          {sidebarTab === 'items' && (
+            <div className="flex flex-col flex-1 overflow-hidden animate-in slide-in-from-left-4 duration-300">
+              {/* Customer Select */}
+              <div className="p-4 border-b border-white/5 bg-surface/30">
+                <label className="block text-[10px] font-black uppercase text-secondary tracking-widest mb-2">Cliente</label>
+                <select
+                  value={selectedCustomerId}
+                  onChange={(e) => setSelectedCustomerId(e.target.value)}
+                  className="w-full p-2.5 bg-input border border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-cyan-500 outline-none text-primary"
+                >
+                  <option value="">Selecione um cliente...</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
-            ) : (
-              cart.map((item, idx) => {
-                const product = products.find(p => p.id === item.productId);
-                return (
-                  <div key={idx} className="bg-surface-hover/50 border border-white/5 rounded-xl p-3 shadow-sm relative group hover:bg-surface-hover transition-colors">
-                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                      <button
-                        onClick={() => {
-                          const newPrice = prompt("Novo preço para este item (R$):", item.subtotal.toFixed(2));
-                          if (newPrice !== null) {
-                            const val = parseFloat(newPrice.replace(',', '.'));
-                            if (!isNaN(val)) {
-                              const newCart = [...cart];
-                              newCart[idx] = { ...newCart[idx], manualPrice: val, subtotal: val };
-                              setCart(newCart);
-                            }
-                          }
-                        }}
-                        className="p-1 text-secondary hover:text-cyan-400"
-                        title="Editar Preço"
-                      >
-                        <Settings size={14} />
-                      </button>
-                      <button
-                        onClick={() => setCart(cart.filter((_, i) => i !== idx))}
-                        className="p-1 text-secondary hover:text-rose-500"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
 
-                    <div className="pr-12">
-                      <h4 className="font-bold text-xs text-primary leading-tight mb-1">{product?.name || 'Item Removido'}</h4>
-                      <div className="flex gap-2 text-[10px] text-secondary font-medium">
-                        {item.labelData ? (
-                          <div className="flex flex-col">
-                            <span>{item.quantity}x Trabalho(s) de Rótulos</span>
-                            <span className="text-cyan-400">Total: {item.labelData.totalLabels} un. ({item.labelData.singleWidth}x{item.labelData.singleHeight}cm)</span>
+              {/* Cart Items List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                {cart.length === 0 ? (
+                  <div className="text-center py-10 opacity-50 flex flex-col items-center justify-center h-full">
+                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                      <ShoppingCart size={24} className="text-secondary" />
+                    </div>
+                    <p className="text-xs font-bold text-secondary uppercase tracking-wider">Seu carrinho está vazio</p>
+                    <p className="text-[10px] text-zinc-500 mt-1">Adicione produtos para começar</p>
+                  </div>
+                ) : (
+                  cart.map((item, idx) => {
+                    const product = products.find(p => p.id === item.productId);
+                    return (
+                      <div key={idx} className="bg-surface-hover/50 border border-white/5 rounded-xl p-3 shadow-sm relative group hover:bg-surface-hover transition-colors">
+                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                          <button
+                            onClick={() => {
+                              const newPrice = prompt("Novo preço para este item (R$):", item.subtotal.toFixed(2));
+                              if (newPrice !== null) {
+                                const val = parseFloat(newPrice.replace(',', '.'));
+                                if (!isNaN(val)) {
+                                  const newCart = [...cart];
+                                  newCart[idx] = { ...newCart[idx], manualPrice: val, subtotal: val };
+                                  setCart(newCart);
+                                }
+                              }
+                            }}
+                            className="p-1.5 bg-black/50 hover:bg-cyan-500 text-white rounded-md transition-colors"
+                            title="Editar Preço"
+                          >
+                            <Settings size={12} />
+                          </button>
+                          <button
+                            onClick={() => setCart(cart.filter((_, i) => i !== idx))}
+                            className="p-1.5 bg-black/50 hover:bg-rose-500 text-white rounded-md transition-colors"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="flex-1">
+                            <h4 className="font-bold text-xs text-primary leading-tight mb-1 line-clamp-2">{product?.name || 'Item Removido'}</h4>
+                            <div className="flex flex-col gap-0.5 text-[10px] text-zinc-400">
+                              {item.labelData ? (
+                                <>
+                                  <span className="flex items-center gap-1"><Layers size={10} /> {item.quantity} arquivos</span>
+                                  <span className="text-cyan-400">{item.labelData.totalLabels} un. totais</span>
+                                </>
+                              ) : (
+                                <span className="flex items-center gap-1"><Ruler size={10} /> {item.quantity}x {(item.width || 0).toFixed(2)}m x {(item.height || 0).toFixed(2)}m</span>
+                              )}
+                            </div>
                           </div>
-                        ) : (
-                          <>
-                            <span>{item.quantity}x</span>
-                            <span>{(item.width || 0).toFixed(2)}x{(item.height || 0).toFixed(2)}m</span>
-                          </>
-                        )}
+                          <div className="text-right shrink-0">
+                            {item.manualPrice ? (
+                              <div className="flex flex-col items-end">
+                                <span className="text-[9px] line-through text-zinc-600">R$ {product?.salePrice ? (product.salePrice * item.quantity * (item.labelData?.areaM2 || 1)).toFixed(2) : '0.00'}</span>
+                                <span className="text-xs font-black text-amber-400">R$ {item.subtotal.toFixed(2)}</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs font-black text-cyan-400">R$ {item.subtotal.toFixed(2)}</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-2 text-right">
-                        {item.manualPrice ? (
-                          <span className="flex items-center justify-end gap-2">
-                            <span className="text-[10px] line-through text-secondary">R$ {product?.salePrice ? (product.salePrice * item.quantity * (item.labelData?.areaM2 || 1)).toFixed(2) : '0.00'}</span>
-                            <span className="text-sm font-black text-amber-400 border-b border-amber-400 border-dashed">R$ {item.subtotal.toFixed(2)}</span>
-                          </span>
-                        ) : (
-                          <span className="text-sm font-black text-cyan-400">R$ {item.subtotal.toFixed(2)}</span>
-                        )}
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Items Tab Footer */}
+              <div className="p-4 border-t border-white/5 bg-surface/50 space-y-3">
+                <div className="flex justify-between items-end">
+                  <span className="text-[10px] uppercase text-secondary font-bold tracking-widest">Subtotal ({cart.length} itens)</span>
+                  <span className="text-lg font-black text-white">R$ {itemsTotal.toFixed(2)}</span>
+                </div>
+                <button
+                  onClick={() => setSidebarTab('checkout')}
+                  disabled={cart.length === 0}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-emerald-900/20 transition-all flex items-center justify-center gap-2"
+                >
+                  Ir para Fechamento <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: CHECKOUT */}
+          {sidebarTab === 'checkout' && (
+            <div className="flex flex-col flex-1 overflow-hidden animate-in slide-in-from-right-4 duration-300">
+              <div className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar">
+
+                {/* 1. Delivery & Address */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                    <Truck size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Entrega e Logística</span>
+                  </div>
+
+                  {/* Address Input */}
+                  <div className="flex items-center gap-2 text-xs text-zinc-300 bg-black/20 p-2 rounded-lg border border-white/10 group focus-within:border-indigo-500/50 transition-colors">
+                    <MapPin size={14} className="text-zinc-500 shrink-0" />
+                    <input
+                      type="text"
+                      value={installAddress}
+                      onChange={(e) => setInstallAddress(e.target.value)}
+                      className="bg-transparent border-none outline-none flex-1 w-full placeholder-zinc-600 truncate"
+                      placeholder="Endereço de entrega..."
+                    />
+                    {shippingDist !== null && <span className="font-bold text-indigo-400 whitespace-nowrap shrink-0 text-[10px] bg-indigo-500/10 px-1.5 py-0.5 rounded">{shippingDist.toFixed(1)} km</span>}
+                  </div>
+
+                  {/* Address Fees Row */}
+                  <div className="flex flex-col gap-2">
+                    {/* Design Fee */}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5 hover:border-pink-500/30 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 bg-pink-500/20 rounded text-pink-400"><Paintbrush size={12} /></div>
+                        <span className="text-[10px] font-bold text-zinc-300 uppercase">Arte</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-zinc-500">R$</span>
+                        <input type="number" value={designFee} onChange={(e) => setDesignFee(parseFloat(e.target.value) || 0)} className="w-16 bg-transparent text-right font-bold text-white outline-none text-xs border-b border-white/10 focus:border-pink-500" placeholder="0.00" />
+                      </div>
+                    </div>
+
+                    {/* Freight Fee */}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5 hover:border-indigo-500/30 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 bg-indigo-500/20 rounded text-indigo-400"><Truck size={12} /></div>
+                        <span className="text-[10px] font-bold text-zinc-300 uppercase">Frete</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-zinc-500">R$</span>
+                          <input type="number" value={installFee} onChange={(e) => setInstallFee(parseFloat(e.target.value) || 0)} className="w-16 bg-transparent text-right font-bold text-white outline-none text-xs border-b border-white/10 focus:border-indigo-500" placeholder="0.00" />
+                        </div>
+                        <button onClick={handleCalculateShipping} disabled={isCalculatingShipping || !installAddress} className="p-1 hover:bg-indigo-500 hover:text-white rounded text-indigo-500 transition-colors" title="Calcular Frete">
+                          {isCalculatingShipping ? <Loader2 size={12} className="animate-spin" /> : <Calculator size={12} />}
+                        </button>
                       </div>
                     </div>
                   </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Additional Fees & Address Context */}
-          <div className="p-4 bg-surface/50 border-t border-white/5 space-y-4">
-            {/* Address Context Bar */}
-            {installAddress && (
-              <div className="flex items-center gap-2 text-[10px] text-zinc-400 bg-white/5 p-2 rounded-lg border border-white/5 group-focus-within:border-indigo-500/50 transition-colors">
-                <Truck size={12} className="text-indigo-400 shrink-0" />
-                <input
-                  type="text"
-                  value={installAddress}
-                  onChange={(e) => setInstallAddress(e.target.value)}
-                  className="bg-transparent border-none outline-none flex-1 w-full text-zinc-300 placeholder-zinc-600 truncate"
-                  placeholder="Endereço de entrega..."
-                />
-                {shippingDist !== null && <span className="font-bold text-indigo-300 whitespace-nowrap shrink-0">{shippingDist.toFixed(1)} km</span>}
-              </div>
-            )}
-
-            <div className="flex flex-col gap-3">
-              {/* Design Fee - Row Layout */}
-              <div className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-pink-500/10 text-pink-500 group-hover:bg-pink-500/20 transition-colors">
-                    <Paintbrush size={14} />
-                  </div>
-                  <label className="text-[10px] font-bold text-zinc-300 uppercase tracking-wide">Taxa de Arte</label>
                 </div>
-                <div className="relative w-28">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-medium">R$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={designFee}
-                    onChange={(e) => setDesignFee(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-black/20 border border-white/10 rounded-lg pl-8 pr-2 py-1.5 text-xs font-bold text-white focus:ring-1 focus:ring-pink-500/50 outline-none text-right"
-                    placeholder="0.00"
+
+                {/* 2. Financials */}
+                <div className="space-y-3 pt-2 border-t border-white/5">
+                  <div className="flex items-center gap-2 text-emerald-400 mb-1">
+                    <DollarSign size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Pagamento</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] font-black text-secondary uppercase block mb-1">Desconto</label>
+                      <div className="relative">
+                        <input type="number" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)} className="w-full bg-input border border-white/10 rounded-lg pl-2 pr-6 py-2 text-xs font-bold text-white focus:ring-1 focus:ring-emerald-500 outline-none" />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 text-[10px]">%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-secondary uppercase block mb-1">Prazo</label>
+                      <div className="relative">
+                        <input type="number" value={deadlineDays} onChange={(e) => setDeadlineDays(parseFloat(e.target.value) || 0)} className="w-full bg-input border border-white/10 rounded-lg pl-2 pr-8 py-2 text-xs font-bold text-white focus:ring-1 focus:ring-emerald-500 outline-none" />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 text-[10px]">dias</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] font-black text-secondary uppercase block mb-1">Sinal</label>
+                      <select value={downPaymentMethod} onChange={e => setDownPaymentMethod(e.target.value)} className="w-full bg-input border border-white/10 rounded-lg px-2 py-2 text-[10px] font-bold text-white outline-none">
+                        <option value="Pix">Pix</option>
+                        <option value="Cartão Crédito">Crédito</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-secondary uppercase block mb-1">Restante</label>
+                      <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="w-full bg-input border border-white/10 rounded-lg px-2 py-2 text-[10px] font-bold text-white outline-none">
+                        <option value="Pix">Pix</option>
+                        <option value="Cartão Crédito">Crédito</option>
+                        <option value="Boleto">Boleto</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Notes */}
+                <div className="pt-2 border-t border-white/5">
+                  <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1">Observações</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Instruções especiais..."
+                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-indigo-500 outline-none h-20 resize-none custom-scrollbar"
                   />
                 </div>
+
+                {/* Divider to ensure scrolling */}
+                <div className="h-4"></div>
               </div>
 
-              {/* Installation Fee - Row Layout */}
-              <div className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-indigo-500/10 text-indigo-500 group-hover:bg-indigo-500/20 transition-colors">
-                    <Truck size={14} />
+              {/* Checkout Footer (Totals & Actions) */}
+              <div className="p-4 bg-surface/80 backdrop-blur-md border-t border-white/10 space-y-4">
+                {/* Total Display */}
+                <div className="flex justify-between items-end">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">Total Final</span>
+                    {discountAmount > 0 && <span className="text-[10px] text-emerald-400">Economia: R$ {discountAmount.toFixed(2)}</span>}
                   </div>
-                  <label className="text-[10px] font-bold text-zinc-300 uppercase tracking-wide">Frete / Instalação</label>
+                  <div className="text-right">
+                    <span className="text-3xl font-black text-white tracking-tighter block leading-none">R$ {total.toFixed(2)}</span>
+                    <span className="text-[10px] text-zinc-500">em até 12x no cartão</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1 w-36">
-                  <div className="relative flex-1">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-medium">R$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={installFee}
-                      onChange={(e) => setInstallFee(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-black/20 border border-white/10 rounded-l-lg pl-7 pr-2 py-1.5 text-xs font-bold text-white focus:ring-1 focus:ring-indigo-500/50 outline-none text-right"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  {/* Calculator Button */}
-                  <button
-                    onClick={handleCalculateShipping}
-                    disabled={isCalculatingShipping || !installAddress}
-                    className="px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-500 hover:text-white border border-indigo-500/20 rounded-r-lg transition-all flex items-center justify-center disabled:opacity-50 disabled:hover:bg-indigo-500/10 disabled:hover:text-indigo-500"
-                    title={installAddress ? "Calcular Frete Sugerido" : "Selecione um cliente para calcular"}
-                  >
-                    {isCalculatingShipping ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />}
+                {/* Big Actions Grid */}
+                <div className="grid grid-cols-4 gap-2">
+                  <button onClick={() => setShowIndicators(true)} className="col-span-1 h-12 rounded-xl bg-surface-hover border border-white/10 text-zinc-400 hover:text-white hover:border-white/30 flex flex-col items-center justify-center gap-1 transition-all" title="Ver Custos">
+                    <Calculator size={16} /> <span className="text-[8px] font-black uppercase">Custos</span>
+                  </button>
+
+                  <button onClick={handleGeneratePDF} className="col-span-1 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white flex flex-col items-center justify-center gap-1 transition-all" title="PDF">
+                    <FileText size={16} /> <span className="text-[8px] font-black uppercase">PDF</span>
+                  </button>
+
+                  <button onClick={handleGenerateBudget} disabled={isGeneratingPitch} className="col-span-1 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 hover:bg-indigo-500 hover:text-white flex flex-col items-center justify-center gap-1 transition-all" title="Pitch IA">
+                    {isGeneratingPitch ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} <span className="text-[8px] font-black uppercase">Pitch</span>
+                  </button>
+
+                  <button onClick={handleFinalize} disabled={createQuoteMutation.isPending} className="col-span-1 h-12 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:brightness-110 flex flex-col items-center justify-center gap-1 transition-all" title="Salvar">
+                    {createQuoteMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} <span className="text-[8px] font-black uppercase">Salvar</span>
                   </button>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Totals & Actions */}
-          <div className="p-4 bg-surface/50 border-t border-white/5 space-y-3">
-            <div className="flex justify-between items-end">
-              <span className="text-[10px] font-black uppercase text-secondary tracking-widest">Total Calculado</span>
-              <div className="text-right">
-                <p className="text-2xl font-black text-primary tracking-tighter">R$ {total.toFixed(2)}</p>
-                {discountPercent > 0 && <p className="text-[10px] text-emerald-400 font-bold">-{discountPercent.toFixed(1)}% (R$ {discountAmount.toFixed(2)})</p>}
-              </div>
-            </div>
-
-            {/* Discount & Payment Controls */}
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
-              <div>
-                <label className="text-[9px] font-black text-secondary uppercase tracking-widest">Desconto %</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={discountPercent}
-                  onChange={(e) => {
-                    let val = parseFloat(e.target.value);
-                    if (val < 0) val = 0;
-                    setDiscountPercent(val);
-                  }}
-                  className="w-full bg-input border border-white/10 rounded-lg px-2 py-1.5 text-xs font-bold text-white focus:ring-1 focus:ring-indigo-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Preço Final</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  // Using defaultValue to allow free typing, or we can use a local state.
-                  // Switching to local state management for better UX.
-                  value={localFinalPrice}
-                  onChange={(e) => setLocalFinalPrice(e.target.value)}
-                  onBlur={() => {
-                    const desiredTotal = parseFloat(localFinalPrice);
-                    if (!isNaN(desiredTotal) && subTotal > 0) {
-                      const requiredDisc = (1 - (desiredTotal / subTotal)) * 100;
-                      setDiscountPercent(Number(requiredDisc.toFixed(2)));
-                    } else {
-                      // Reset if invalid
-                      setLocalFinalPrice(total.toFixed(2));
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  className="w-full bg-input border border-amber-500/30 rounded-lg px-2 py-1.5 text-xs font-bold text-amber-400 focus:ring-1 focus:ring-amber-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="text-[9px] font-black text-secondary uppercase tracking-widest">Prazo (Dias)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={deadlineDays}
-                  onChange={(e) => setDeadlineDays(Number(e.target.value))}
-                  className="w-full bg-input border border-white/10 rounded-lg px-2 py-1.5 text-xs font-bold text-white focus:ring-1 focus:ring-indigo-500 outline-none"
-                />
-              </div>
-              <div className="flex gap-1">
-                <div className="flex-1">
-                  <label className="text-[9px] font-black text-secondary uppercase tracking-widest">Sinal</label>
-                  <select value={downPaymentMethod} onChange={e => setDownPaymentMethod(e.target.value)} className="w-full bg-input border border-white/10 rounded-lg px-1 py-1.5 text-[10px] font-bold text-white outline-none">
-                    <option value="Pix">Pix</option>
-                    <option value="Cartão Crédito">Crédito</option>
-                    <option value="Cartão Débito">Débito</option>
-                    <option value="Dinheiro">Dinheiro</option>
-                    <option value="Boleto">Boleto</option>
-                  </select>
-                </div>
-                <div className="flex-1">
-                  <label className="text-[9px] font-black text-secondary uppercase tracking-widest">Restante</label>
-                  <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="w-full bg-input border border-white/10 rounded-lg px-1 py-1.5 text-[10px] font-bold text-white outline-none">
-                    <option value="Pix">Pix</option>
-                    <option value="Cartão Crédito">Pix</option>
-                    <option value="Cartão Débito">Crédito</option>
-                    <option value="Dinheiro">Débito</option>
-                    <option value="Boleto">Dinheiro</option>
-                  </select>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Observations Input */}
-          <div className="pt-2 border-t border-white/5">
-            <label className="text-[9px] font-black text-secondary uppercase tracking-widest block mb-1">Observações / Instruções</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ex: Entregar na recepção; Cliente pediu reforço na solda..."
-              className="w-full bg-input border border-white/10 rounded-lg px-2 py-2 text-xs text-white focus:ring-1 focus:ring-indigo-500 outline-none h-16 resize-none custom-scrollbar"
-            />
-          </div>
-
-          {/* Actions Grid - Compact */}
-          {/* Actions Grid - Compact Row */}
-          <div className="grid grid-cols-4 gap-1">
-            <button
-              onClick={() => setShowIndicators(true)}
-              className="py-2 bg-surface-hover border border-white/10 hover:border-cyan-500/50 hover:text-cyan-400 text-secondary rounded-lg font-bold uppercase text-[9px] tracking-wide transition-all flex flex-col items-center justify-center gap-1 h-12"
-              title="Ver Custos"
-            >
-              <Calculator size={14} /> <span>Custos</span>
-            </button>
-
-            <button
-              onClick={handleGeneratePDF}
-              disabled={cart.length === 0}
-              className="py-2 bg-rose-600/90 text-white rounded-lg font-bold uppercase text-[9px] tracking-wide hover:bg-rose-600 transition-all flex flex-col items-center justify-center gap-1 shadow-lg shadow-rose-500/20 h-12"
-              title="Gerar PDF"
-            >
-              <FileText size={14} /> <span>PDF</span>
-            </button>
-
-            <button
-              onClick={handleGenerateBudget}
-              disabled={isGeneratingPitch || !selectedCustomerId}
-              className="py-2 bg-indigo-600/90 text-white rounded-lg font-bold uppercase text-[9px] tracking-wide hover:bg-indigo-600 transition-all flex flex-col items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20 h-12"
-              title="Gerar Pitch com IA"
-            >
-              {isGeneratingPitch ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              <span>Pitch</span>
-            </button>
-
-            <button
-              onClick={handleFinalize}
-              disabled={createQuoteMutation.isPending}
-              className="py-2 bg-emerald-500/90 text-white rounded-lg font-bold uppercase text-[9px] tracking-wide hover:bg-emerald-500 transition-all flex flex-col items-center justify-center gap-1 shadow-lg shadow-emerald-500/20 h-12"
-              title="Salvar Orçamento"
-            >
-              {createQuoteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              <span>Salvar</span>
-            </button>
-          </div>
         </div>
       </div>
 
