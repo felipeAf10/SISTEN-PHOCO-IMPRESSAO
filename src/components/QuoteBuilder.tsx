@@ -835,38 +835,43 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
           </div>
 
           {/* Actions Grid - Compact */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Actions Grid - Compact Row */}
+          <div className="grid grid-cols-4 gap-1">
             <button
               onClick={() => setShowIndicators(true)}
-              className="py-2.5 bg-surface-hover border border-white/10 hover:border-cyan-500/50 hover:text-cyan-400 text-secondary rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all flex items-center justify-center gap-2"
+              className="py-2 bg-surface-hover border border-white/10 hover:border-cyan-500/50 hover:text-cyan-400 text-secondary rounded-lg font-bold uppercase text-[9px] tracking-wide transition-all flex flex-col items-center justify-center gap-1 h-12"
+              title="Ver Custos"
             >
-              <Calculator size={14} /> Custos
+              <Calculator size={14} /> <span>Custos</span>
             </button>
 
             <button
               onClick={handleGeneratePDF}
               disabled={cart.length === 0}
-              className="py-2.5 bg-rose-600/90 text-white rounded-xl font-bold uppercase text-[10px] tracking-wider hover:bg-rose-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20"
+              className="py-2 bg-rose-600/90 text-white rounded-lg font-bold uppercase text-[9px] tracking-wide hover:bg-rose-600 transition-all flex flex-col items-center justify-center gap-1 shadow-lg shadow-rose-500/20 h-12"
+              title="Gerar PDF"
             >
-              <FileText size={14} /> PDF
+              <FileText size={14} /> <span>PDF</span>
             </button>
 
             <button
               onClick={handleGenerateBudget}
               disabled={isGeneratingPitch || !selectedCustomerId}
-              className="py-2.5 bg-indigo-600/90 text-white rounded-xl font-bold uppercase text-[10px] tracking-wider hover:bg-indigo-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
+              className="py-2 bg-indigo-600/90 text-white rounded-lg font-bold uppercase text-[9px] tracking-wide hover:bg-indigo-600 transition-all flex flex-col items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20 h-12"
+              title="Gerar Pitch com IA"
             >
               {isGeneratingPitch ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              Pitch IA
+              <span>Pitch</span>
             </button>
 
             <button
               onClick={handleFinalize}
               disabled={createQuoteMutation.isPending}
-              className="py-2.5 bg-emerald-500/90 text-white rounded-xl font-bold uppercase text-[10px] tracking-wider hover:bg-emerald-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+              className="py-2 bg-emerald-500/90 text-white rounded-lg font-bold uppercase text-[9px] tracking-wide hover:bg-emerald-500 transition-all flex flex-col items-center justify-center gap-1 shadow-lg shadow-emerald-500/20 h-12"
+              title="Salvar Orçamento"
             >
               {createQuoteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              Salvar
+              <span>Salvar</span>
             </button>
           </div>
         </div>
