@@ -10,12 +10,13 @@ interface GeoResult {
 // Av. João Gomes Cardoso, 435 - Jardim Laguna, Contagem - MG
 const ORIGIN_LAT = -19.9248;
 const ORIGIN_LON = -44.1485;
+import { refineAddress } from './geminiService';
 
 export const loadGoogleMaps = () => Promise.resolve(); // No-op for compatibility
 
 export const mapService = {
     // Search using Nominatim (OpenStreetMap)
-    async searchAddress(query: string): Promise<GeoResult[]> {
+    async searchAddress(query: string, attempt = 1): Promise<GeoResult[]> {
         if (!query || query.length < 3) return [];
 
         try {
@@ -26,8 +27,7 @@ export const mapService = {
             // -47.0,-16.0 (Top Left) to -41.0,-23.0 (Bottom Right)
             const viewbox = '-47.0,-16.0,-41.0,-23.0';
 
-            // Search with Viewbox preference (bounded=0) to ensure we get results
-            // We removed the forced ", Minas Gerais" suffix to allow broader matching
+            // Standard Nominatim Search
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=br&limit=5&addressdetails=1&viewbox=${viewbox}&bounded=0`;
 
             const response = await fetch(url, {
@@ -40,11 +40,27 @@ export const mapService = {
             if (!response.ok) throw new Error('Nominatim Error');
 
             const data = await response.json();
-            return data.map((item: any) => ({
+            let results = data.map((item: any) => ({
                 lat: item.lat,
                 lon: item.lon,
                 display_name: item.display_name
             }));
+
+            // --- AI FALLBACK (SMART SEARCH) ---
+            // If no results and it's the first attempt, try to refine with AI
+            if (results.length === 0 && attempt === 1) {
+                console.log(`[SmartSearch] No results for "${query}". Asking AI...`);
+                const refined = await refineAddress(query);
+
+                if (refined && refined !== query) {
+                    console.log(`[SmartSearch] AI suggested: "${refined}". Retrying...`);
+                    // Retry recursively with the refined term (attempt 2)
+                    return this.searchAddress(refined, 2);
+                }
+            }
+
+            return results;
+
         } catch (error) {
             console.error('Nominatim Search Error:', error);
             return [];

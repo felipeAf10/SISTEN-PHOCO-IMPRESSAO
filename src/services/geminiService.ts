@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Customer, QuoteItem } from "../types";
 
@@ -266,3 +267,33 @@ export const generateSalesPitchFallback = (
     `Design Phoco`;
 };
 
+
+export const refineAddress = async (rawInput: string): Promise<string | null> => {
+  const genAI = getGenAI();
+  if (!genAI) return null;
+
+  const genModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const prompt = `Aja como um especialista em endereçamento de Minas Gerais (BH e Contagem).
+  O usuário digitou um endereço vago ou com erros: "${rawInput}".
+  
+  Sua missão: Corrigir e padronizar esse endereço para o formato mais provável existente.
+  
+  Exemplos:
+  "Av Joao" -> "Avenida João Gomes Cardoso, Contagem, MG"
+  "Rua Rio Mantiqueira" -> "Rua Rio Mantiqueira, Contagem, MG"
+  "Centro" -> "Centro, Contagem, MG"
+  
+  Retorne APENAS o endereço corrigido, sem explicações. Se não conseguir identificar nada plausível, retorne "null".`;
+
+  try {
+    const result = await genModel.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    if (text.toLowerCase() === 'null') return null;
+    return text;
+  } catch (error) {
+    console.error("Erro ao refinar endereço com IA:", error);
+    return null;
+  }
+};
