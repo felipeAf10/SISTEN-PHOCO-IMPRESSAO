@@ -19,9 +19,28 @@ export const mapService = {
     // Search address using Nominatim (OSM)
     async searchAddress(query: string): Promise<GeoResult[]> {
         try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&limit=5`);
+            // 1. Clean query (Remove CEP/ZipCode which often confuses Nominatim)
+            let cleanQuery = query.replace(/cep:?\s*\d{5}-?\d{3}/gi, '').trim();
+            cleanQuery = cleanQuery.replace(/\d{5}-?\d{3}/g, '').trim(); // Remove standalone CEPs
+
+            // 2. First attempt: Full cleaned query
+            let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=br&limit=5`);
             if (!response.ok) throw new Error('Erro ao buscar endereço');
-            return await response.json();
+            let data = await response.json();
+
+            if (data && data.length > 0) return data;
+
+            // 3. Fallback: Try removing the house number (often the cause of failure in OSM)
+            // Heuristic: remove number after a comma, or standalone numbers at end
+            const queryWithoutNumber = cleanQuery.replace(/,?\s*\d+\s*$/, '').replace(/,?\s*\d+\s*,/, ',');
+
+            if (queryWithoutNumber !== cleanQuery && queryWithoutNumber.length > 5) {
+                response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryWithoutNumber)}&countrycodes=br&limit=5`);
+                data = await response.json();
+                if (data && data.length > 0) return data;
+            }
+
+            return [];
         } catch (error) {
             console.error('MapService Search Error:', error);
             return [];

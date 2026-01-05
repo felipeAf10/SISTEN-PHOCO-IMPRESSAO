@@ -659,10 +659,16 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
           <div className="p-4 bg-surface/50 border-t border-white/5 space-y-4">
             {/* Address Context Bar */}
             {installAddress && (
-              <div className="flex items-center gap-2 text-[10px] text-zinc-400 bg-white/5 p-2 rounded-lg border border-white/5">
-                <Truck size={12} className="text-indigo-400" />
-                <span className="truncate flex-1">{installAddress}</span>
-                {shippingDist !== null && <span className="font-bold text-indigo-300 whitespace-nowrap">{shippingDist.toFixed(1)} km</span>}
+              <div className="flex items-center gap-2 text-[10px] text-zinc-400 bg-white/5 p-2 rounded-lg border border-white/5 group-focus-within:border-indigo-500/50 transition-colors">
+                <Truck size={12} className="text-indigo-400 shrink-0" />
+                <input
+                  type="text"
+                  value={installAddress}
+                  onChange={(e) => setInstallAddress(e.target.value)}
+                  className="bg-transparent border-none outline-none flex-1 w-full text-zinc-300 placeholder-zinc-600 truncate"
+                  placeholder="Endereço de entrega..."
+                />
+                {shippingDist !== null && <span className="font-bold text-indigo-300 whitespace-nowrap shrink-0">{shippingDist.toFixed(1)} km</span>}
               </div>
             )}
 
