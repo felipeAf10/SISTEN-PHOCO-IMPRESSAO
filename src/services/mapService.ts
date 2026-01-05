@@ -25,7 +25,7 @@ export const mapService = {
             // Viewbox for Minas Gerais/Sudeste preference
             // x1 (lon left), y1 (lat top), x2 (lon right), y2 (lat bottom)
             const viewbox = '-51.5,-13.5,-39.5,-23.5'; // Approx box covering MG
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=br&limit=5&addressdetails=1&viewbox=${viewbox}&bounded=0`;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=br&limit=5&addressdetails=1&viewbox=${viewbox}&bounded=1`;
 
             const response = await fetch(url, {
                 headers: {
