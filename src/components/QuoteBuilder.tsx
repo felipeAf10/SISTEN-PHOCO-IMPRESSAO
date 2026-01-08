@@ -774,7 +774,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
 
                         <div className="flex justify-between items-start gap-3">
                           <div className="flex-1">
-                            <h4 className="font-bold text-xs text-primary leading-tight mb-1 line-clamp-2">{product?.name || 'Item Removido'}</h4>
+                            <h4 className="font-bold text-xs text-primary leading-tight mb-1 line-clamp-2">{product?.name || item.productName || 'Item Removido'}</h4>
                             <div className="flex flex-col gap-0.5 text-[10px] text-zinc-400">
                               {item.labelData ? (
                                 <>
