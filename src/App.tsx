@@ -243,8 +243,11 @@ const App: React.FC = () => {
   }, []);
   const handleLogin = (u: User) => {
     setUser(u);
-    if (u.role === 'production') setActiveView('production');
-    else setActiveView('dashboard');
+    // Only reset view if this is a fresh login (no user loaded yet)
+    if (!userRef.current) {
+      if (u.role === 'production') setActiveView('production');
+      else setActiveView('dashboard');
+    }
   };
 
   const handleLogout = async () => {
