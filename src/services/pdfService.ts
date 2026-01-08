@@ -145,10 +145,20 @@ export const generateQuotePDF = async (
         let name = (product?.name || item.productName || 'Produto').toUpperCase();
         let details = '';
 
-        if (item.labelData) {
+        // Build detailed description for KIT or standard item
+        if (product?.isComposite && product.composition && product.composition.length > 0) {
+            const compList = product.composition.map(c => {
+                const cName = products.find(p => p.id === c.productId)?.name || 'Item';
+                return `• ${c.quantity}x ${cName}`;
+            }).join('\n');
+            details = `KIT COMPORTO POR:\n${compList}`;
+        } else if (item.labelData) {
             details = `Rota de Etiquetas: ${item.labelData.totalLabels} un. (${item.labelData.singleWidth}x${item.labelData.singleHeight}cm)`;
         } else if (item.width && item.height) {
             details = `Medidas: ${item.width.toFixed(2)}m Largura x ${item.height.toFixed(2)}m Altura`;
+        } else {
+            // Fallback for simple units
+            details = product?.unitType ? `Unidade: ${product.unitType}` : '';
         }
 
         return [
@@ -357,7 +367,13 @@ export const generateWorkOrderPDF = async (
         let name = (product?.name || item.productName || 'Produto').toUpperCase();
         let details = '';
 
-        if (item.labelData) {
+        if (product?.isComposite && product.composition && product.composition.length > 0) {
+            const compList = product.composition.map(c => {
+                const cName = products.find(p => p.id === c.productId)?.name || 'Item';
+                return `• ${c.quantity}x ${cName}`;
+            }).join('\n');
+            details = `KIT / COMPOSIÇÃO:\n${compList}`;
+        } else if (item.labelData) {
             details = `ADESIVO: ${item.labelData.type}\nQTD RÓTULOS: ${item.labelData.totalLabels}\nTAM: ${item.labelData.singleWidth}x${item.labelData.singleHeight}cm`;
         } else if (item.width && item.height) {
             details = `LARG: ${item.width.toFixed(2)}m  x  ALT: ${item.height.toFixed(2)}m\nÁREA: ${(item.width * item.height).toFixed(2)}m²`;

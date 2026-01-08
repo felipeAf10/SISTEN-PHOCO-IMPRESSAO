@@ -1,17 +1,37 @@
 import React, { useMemo } from 'react';
-import { Quote, FinancialConfig } from '../types';
+import { Quote, FinancialConfig, Product, Customer } from '../types';
 import { DollarSign, TrendingUp, TrendingDown, PieChart, Info } from 'lucide-react';
+import CategorySalesChart from './charts/CategorySalesChart';
+import TopClientsChart from './charts/TopClientsChart';
 
 interface ProfitabilityDashboardProps {
     quotes: Quote[];
     finConfig: FinancialConfig;
+    products: Product[];
+    customers: Customer[];
 }
 
-const ProfitabilityDashboard: React.FC<ProfitabilityDashboardProps> = ({ quotes, finConfig }) => {
+const ProfitabilityDashboard: React.FC<ProfitabilityDashboardProps> = ({ quotes, finConfig, products, customers }) => {
     // Only analyze confirmed/finished quotes
     const validQuotes = useMemo(() => {
         return quotes.filter(q => q.status === 'confirmed' || q.status === 'finished' || q.status === 'delivered');
     }, [quotes]);
+
+    const productsMap = useMemo(() => {
+        const map: Record<string, { category: string }> = {};
+        products.forEach(p => {
+            map[p.id] = { category: p.category };
+        });
+        return map;
+    }, [products]);
+
+    const customersMap = useMemo(() => {
+        const map: Record<string, { name: string }> = {};
+        customers.forEach(c => {
+            map[c.id] = { name: c.name };
+        });
+        return map;
+    }, [customers]);
 
     const stats = useMemo(() => {
         let totalRevenue = 0;
@@ -55,7 +75,7 @@ const ProfitabilityDashboard: React.FC<ProfitabilityDashboardProps> = ({ quotes,
     }, [validQuotes, finConfig]);
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-6 animate-in fade-in duration-500 pb-10">
             <div className="flex items-center gap-4 mb-8">
                 <div className="p-3 bg-emerald-500/20 rounded-2xl">
                     <TrendingUp className="text-emerald-400" size={32} />
@@ -107,6 +127,12 @@ const ProfitabilityDashboard: React.FC<ProfitabilityDashboardProps> = ({ quotes,
                 </div>
             </div>
 
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <CategorySalesChart quotes={validQuotes} productsMap={productsMap} />
+                <TopClientsChart quotes={validQuotes} customersMap={customersMap} />
+            </div>
+
             {/* Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-surface rounded-3xl p-8 border border-white/5">
@@ -119,14 +145,14 @@ const ProfitabilityDashboard: React.FC<ProfitabilityDashboardProps> = ({ quotes,
                             <span className="text-zinc-400 text-sm">Matéria Prima</span>
                             <div className="text-right">
                                 <span className="block font-bold text-white">R$ {stats.totalMaterialCost.toFixed(2)}</span>
-                                <span className="text-xs text-zinc-500">{((stats.totalMaterialCost / stats.totalRevenue) * 100).toFixed(1)}%</span>
+                                <span className="text-xs text-zinc-500">{stats.totalRevenue > 0 ? ((stats.totalMaterialCost / stats.totalRevenue) * 100).toFixed(1) : '0.0'}%</span>
                             </div>
                         </div>
                         <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
                             <span className="text-zinc-400 text-sm">Mão de Obra / Fixo</span>
                             <div className="text-right">
                                 <span className="block font-bold text-white">R$ {stats.totalLaborCost.toFixed(2)}</span>
-                                <span className="text-xs text-zinc-500">{((stats.totalLaborCost / stats.totalRevenue) * 100).toFixed(1)}%</span>
+                                <span className="text-xs text-zinc-500">{stats.totalRevenue > 0 ? ((stats.totalLaborCost / stats.totalRevenue) * 100).toFixed(1) : '0.0'}%</span>
                             </div>
                         </div>
                         <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">

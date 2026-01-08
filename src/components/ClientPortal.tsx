@@ -89,7 +89,7 @@ const ClientPortal: React.FC = () => {
     const handleWhatsApp = () => {
         if (!quote) return;
         const msg = `Olá! Estou vendo o orçamento #${quote.id.slice(-4)} e gostaria de tirar uma dúvida.`;
-        window.open(`https://wa.me/5575992688031?text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`https://wa.me/5531972178464?text=${encodeURIComponent(msg)}`, '_blank');
     };
 
     if (isLoading) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>;
@@ -265,6 +265,19 @@ const ClientPortal: React.FC = () => {
                                                         {(item.labelData.areaM2 * item.quantity).toFixed(2)} m² • {item.labelData.singleWidth}x{item.labelData.singleHeight}cm
                                                     </span>
                                                 </>
+                                            ) : product?.isComposite && product.composition && product.composition.length > 0 ? (
+                                                <div className="mt-2 text-[10px] space-y-1 bg-white/5 p-2 rounded-lg border border-white/5">
+                                                    <p className="font-bold text-cyan-400 uppercase tracking-wider mb-1">Itens do Kit:</p>
+                                                    {product.composition.map((comp: any, i: number) => {
+                                                        const cName = products.find(p => p.id === comp.productId)?.name || '...';
+                                                        return (
+                                                            <div key={i} className="flex justify-between text-zinc-400">
+                                                                <span>• {cName}</span>
+                                                                <span className="text-white font-bold">{comp.quantity * item.quantity} un</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             ) : (
                                                 <>
                                                     {item.quantity} {item.unitPrice ? 'unidades' : 'un'}

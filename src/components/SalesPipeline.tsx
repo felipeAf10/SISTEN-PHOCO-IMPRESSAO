@@ -77,6 +77,17 @@ const SalesPipeline: React.FC = () => {
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     };
 
+    const getDaysSinceInteraction = (quote: Quote) => {
+        // Prefer lastFollowupAt, fallback to quote date
+        const dateStr = quote.lastFollowupAt || quote.date;
+        return getDaysInStatus(dateStr);
+    };
+
+    const pendingFollowUps = quotes.filter(q =>
+        (q.status === 'sent' && getDaysSinceInteraction(q) >= 3) ||
+        (q.status === 'delivered' && getDaysSinceInteraction(q) >= 15)
+    );
+
     if (isLoading) return <div className="flex h-full items-center justify-center"><Loader2 className="animate-spin text-white" size={48} /></div>;
 
     return (
@@ -86,6 +97,20 @@ const SalesPipeline: React.FC = () => {
                     <h1 className="text-3xl font-black text-white uppercase tracking-tight">Pipeline de Vendas</h1>
                     <p className="text-secondary font-medium">Arraste os cards para atualizar o status das negociações.</p>
                 </div>
+
+                {/* Pending Actions Badge */}
+                {pendingFollowUps.length > 0 && (
+                    <div className="hidden md:flex items-center gap-3 bg-indigo-500/20 border border-indigo-500/50 px-4 py-2 rounded-xl animate-pulse">
+                        <div className="bg-indigo-500 p-2 rounded-lg text-white">
+                            <Zap size={20} fill="currentColor" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Ações Pendentes</p>
+                            <p className="text-sm font-black text-white">{pendingFollowUps.length} clientes aguardam contato</p>
+                        </div>
+                    </div>
+                )}
+
                 <button onClick={() => window.location.reload()} className="p-3 bg-surface-hover rounded-xl text-white hover:bg-surface-active transition-colors"><Search size={20} /></button>
             </div>
 
@@ -101,6 +126,11 @@ const SalesPipeline: React.FC = () => {
                         <div className="flex-1 p-3 overflow-y-auto space-y-3 custom-scrollbar">
                             {getColumnQuotes(col.id).map((quote) => {
                                 const customer = customersMap[quote.customerId] || { name: 'Cliente Desconhecido', phone: '' };
+                                const daysSinceInteraction = getDaysSinceInteraction(quote);
+                                const isStale = (quote.status === 'sent' && daysSinceInteraction >= 3);
+                                const isPostSales = (quote.status === 'delivered' && daysSinceInteraction >= 15);
+                                const needsAction = isStale || isPostSales;
+
                                 return (
                                     <div
                                         key={quote.id}
@@ -115,17 +145,12 @@ const SalesPipeline: React.FC = () => {
                                                 <span className="font-bold text-white text-sm line-clamp-1">{customer.name}</span>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                {quote.status === 'sent' && getDaysInStatus(quote.date) >= 3 && (
-                                                    <div title="Sem resposta há 3+ dias" className="bg-red-500/20 text-red-400 p-1.5 rounded-lg border border-red-500/30 animate-pulse">
+                                                {isStale && (
+                                                    <div title={`Sem contato há ${daysSinceInteraction} dias`} className="bg-red-500/20 text-red-400 p-1.5 rounded-lg border border-red-500/30 animate-pulse">
                                                         <Clock size={14} />
                                                     </div>
                                                 )}
-                                                {quote.status === 'sent' && getDaysInStatus(quote.date) === 2 && (
-                                                    <div title="Sem resposta há 2 dias" className="bg-amber-500/20 text-amber-400 p-1.5 rounded-lg border border-amber-500/30">
-                                                        <Clock size={14} />
-                                                    </div>
-                                                )}
-                                                {quote.status === 'delivered' && getDaysInStatus(quote.date) >= 15 && (
+                                                {isPostSales && (
                                                     <div title="Pós-venda sugerido" className="bg-indigo-500/20 text-indigo-400 p-1.5 rounded-lg border border-indigo-500/30">
                                                         <CheckCircle size={14} />
                                                     </div>
@@ -144,38 +169,52 @@ const SalesPipeline: React.FC = () => {
                                                     {quote.totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                                 </span>
                                             </div>
-                                            <div className="text-[10px] text-zinc-500 font-medium">
-                                                {new Date(quote.date).toLocaleDateString()}
+                                            <div className="text-[10px] text-zinc-500 font-medium ml-auto">
+                                                {quote.lastFollowupAt ? (
+                                                    <span className="flex items-center gap-1 text-indigo-400"><MessageSquare size={10} /> {new Date(quote.lastFollowupAt).toLocaleDateString()}</span>
+                                                ) : (
+                                                    <span>{new Date(quote.date).toLocaleDateString()}</span>
+                                                )}
                                             </div>
                                         </div>
 
                                         <div className="flex gap-2 relative z-10">
                                             <button
-                                                onClick={(e) => {
+                                                onClick={async (e) => {
                                                     e.stopPropagation();
                                                     const baseUrl = window.location.origin;
-                                                    const days = getDaysInStatus(quote.date);
+                                                    const days = daysSinceInteraction;
 
                                                     // Smart Template Logic
                                                     let template: any = 'follow_up';
                                                     if (quote.status === 'sent' && days >= 3) template = 'follow_up_stale';
                                                     if (['delivered', 'finished'].includes(quote.status) && days >= 15) template = 'post_sales';
 
-                                                    const msg = generateMessage(template, { customerName: customer.name, quoteId: quote.id, link: `${baseUrl}/my-quote/${quote.id}` });
+                                                    const msg = generateMessage(template, { customerName: customer.name, quoteId: quote.id, link: `${baseUrl}/my-quote/${encodeURIComponent(quote.id)}` });
+
 
                                                     let phone = customer.phone.replace(/\D/g, '');
                                                     if (phone && (phone.length === 10 || phone.length === 11)) phone = "55" + phone;
 
                                                     openWhatsApp(phone, msg);
+
+                                                    // Register Logic
+                                                    try {
+                                                        await api.quotes.registerFollowup(quote.id);
+                                                        toast.success("Follow-up registrado!");
+                                                        queryClient.invalidateQueries({ queryKey: ['quotes'] });
+                                                    } catch (err) {
+                                                        console.error("Failed to register followup", err);
+                                                    }
                                                 }}
                                                 className={`flex-1 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-colors border
-                                                    ${(quote.status === 'sent' && getDaysInStatus(quote.date) >= 3) || (['delivered'].includes(quote.status) && getDaysInStatus(quote.date) >= 15)
+                                                    ${needsAction
                                                         ? 'bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.4)]'
                                                         : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/20'
                                                     }`}
                                             >
-                                                {(quote.status === 'sent' && getDaysInStatus(quote.date) >= 3) || (['delivered'].includes(quote.status) && getDaysInStatus(quote.date) >= 15) ? (
-                                                    <><Zap size={14} fill="currentColor" /> Ação Rápida</>
+                                                {needsAction ? (
+                                                    <><Zap size={14} fill="currentColor" /> {quote.lastFollowupAt ? 'Novo Contato' : 'Ação Rápida'}</>
                                                 ) : (
                                                     <><MessageSquare size={14} /> WhatsApp</>
                                                 )}

@@ -1,5 +1,11 @@
 import { supabase } from '../lib/supabase';
-import { Product, Customer, Quote, FixedAsset, FixedCost, ScheduleEvent, AppView, User, TimeRecord, InventoryTransaction } from '../../types';
+import { Product, Customer, Quote, FixedAsset, FixedCost, ScheduleEvent, AppView, User, TimeRecord, InventoryTransaction, Supplier } from '../types';
+
+export interface ProductCategory {
+    id: string;
+    name: string;
+}
+
 
 export const api = {
     products: {
@@ -33,42 +39,88 @@ export const api = {
                 wastePercent: Number(p.waste_percent),
                 salePrice: parsePrice(p.sale_price),
                 stock: Number(p.stock),
-                availableRollWidths: p.available_roll_widths
+                availableRollWidths: p.available_roll_widths,
+                isComposite: p.is_composite,
+                composition: p.composition
             })) as Product[];
         },
-        create: async (product: Product) => {
-            const dbProduct = {
-                id: product.id,
-                name: product.name,
-                category: product.category,
-                unit_type: product.unitType,
-                cost_price: product.costPrice,
-                production_time_minutes: product.productionTimeMinutes,
-                waste_percent: product.wastePercent,
-                sale_price: product.salePrice,
-                stock: product.stock,
-                available_roll_widths: product.availableRollWidths
-            };
-            const { error } = await supabase.from('products').insert(dbProduct);
+        create: async (product: Omit<Product, 'id'>) => {
+            // 1. Create Product
+            const { data, error } = await supabase
+                .from('products')
+                .insert({
+                    name: product.name,
+                    category: product.category,
+                    unit_type: product.unitType,
+                    sale_price: product.salePrice,
+                    cost_price: product.costPrice,
+                    production_time_minutes: product.productionTimeMinutes,
+                    waste_percent: product.wastePercent,
+                    stock: product.stock,
+                    available_roll_widths: product.availableRollWidths,
+                    is_composite: product.isComposite,
+                    supplier_id: product.supplierId,
+                    min_stock_level: product.minStock
+                })
+                .select()
+                .single();
+
             if (error) throw error;
+            const newProduct = data;
+
+            // 2. If composite, add components
+            if (product.isComposite && product.composition && product.composition.length > 0) {
+                const componentsToInsert = product.composition.map(c => ({
+                    parent_product_id: newProduct.id,
+                    component_id: c.productId,
+                    quantity: c.quantity
+                }));
+                const { error: compError } = await supabase.from('product_components').insert(componentsToInsert);
+                if (compError) console.error("Error adding components", compError);
+            }
+
+            return newProduct;
         },
-        update: async (product: Product) => {
-            const dbProduct = {
-                id: product.id,
-                name: product.name,
-                category: product.category,
-                unit_type: product.unitType,
-                cost_price: product.costPrice,
-                production_time_minutes: product.productionTimeMinutes,
-                waste_percent: product.wastePercent,
-                sale_price: product.salePrice,
-                stock: product.stock,
-                available_roll_widths: product.availableRollWidths
-            };
-            const { error } = await supabase.from('products').update(dbProduct).eq('id', product.id);
+
+        update: async (id: string, product: Partial<Product>) => {
+            // Update basic fields
+            const { error } = await supabase
+                .from('products')
+                .update({
+                    name: product.name,
+                    category: product.category,
+                    unit_type: product.unitType,
+                    sale_price: product.salePrice,
+                    cost_price: product.costPrice,
+                    production_time_minutes: product.productionTimeMinutes,
+                    waste_percent: product.wastePercent,
+                    stock: product.stock,
+                    available_roll_widths: product.availableRollWidths,
+                    is_composite: product.isComposite, // Update flag
+                    supplier_id: product.supplierId,
+                    min_stock_level: product.minStock
+                })
+                .eq('id', id);
+
             if (error) throw error;
+
+            // Update composition if provided (Full replacement approach for simplicity)
+            if (product.composition !== undefined) { // Check undefined to allow partial updates of other fields without clearing composition
+                // Delete old
+                await supabase.from('product_components').delete().eq('parent_product_id', id);
+
+                // Insert new
+                if (product.composition.length > 0) {
+                    const componentsToInsert = product.composition.map(c => ({
+                        parent_product_id: id,
+                        component_id: c.productId,
+                        quantity: c.quantity
+                    }));
+                    await supabase.from('product_components').insert(componentsToInsert);
+                }
+            }
         },
-        updateStock: async (id: string, quantityToRemove: number) => {
+        updateStock: async (id: string, quantityToRemove: number, type: 'manual_adjustment' | 'sale' | 'purchase' | 'production_deduction' = 'manual_adjustment', referenceId?: string, notes?: string) => {
             // First get current stock
             const { data: product, error: fetchError } = await supabase.from('products').select('stock').eq('id', id).single();
             if (fetchError) throw fetchError;
@@ -77,12 +129,32 @@ export const api = {
 
             const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', id);
             if (error) throw error;
+
+            // Log Transaction (Inverted logic: quantityToRemove is negative change if we are removing)
+            // But usually updateStock(10) means Remove 10. So change is -10.
+            // If we use this method for adding, we pass negative quantityToRemove?
+            // Let's standardise: quantityToRemove is what we subtract.
+            const change = -quantityToRemove;
+
+            try {
+                await supabase.from('inventory_transactions').insert({
+                    product_id: id,
+                    quantity_change: change,
+                    type: type,
+                    reference_id: referenceId,
+                    notes: notes || `Stock update: ${change}`
+                });
+            } catch (err) {
+                console.error("Failed to log inventory transaction", err);
+                // Don't fail the whole operation if logging fails, but warn.
+            }
         },
         delete: async (id: string) => {
             const { error } = await supabase.from('products').delete().eq('id', id);
             if (error) throw error;
         }
     },
+
     customers: {
         list: async () => {
             const { data, error } = await supabase.from('customers').select('*');
@@ -123,7 +195,8 @@ export const api = {
                 userId:user_id,
                 commissionPaid:commission_paid,
                 commissionDate:commission_date,
-                commissionPercent:commission_percent
+                commissionPercent:commission_percent,
+                previewUrl:preview_url
             `);
             if (error) throw error;
             return data as Quote[];
@@ -152,7 +225,8 @@ export const api = {
                 user_id: quote.userId,
                 commission_paid: quote.commissionPaid,
                 commission_date: quote.commissionDate,
-                commission_percent: currentCommission // Snapshot
+                commission_percent: currentCommission, // Snapshot
+                preview_url: quote.previewUrl
             };
             const { error } = await supabase.from('quotes').insert(dbQuote);
             if (error) throw error;
@@ -183,13 +257,21 @@ export const api = {
                 user_id: quote.userId,
                 commission_paid: quote.commissionPaid,
                 commission_date: quote.commissionDate,
-                stock_deducted: quote.stockDeducted
+                stock_deducted: quote.stockDeducted,
+                preview_url: quote.previewUrl
             };
             const { error } = await supabase.from('quotes').update(dbQuote).eq('id', quote.id);
             if (error) throw error;
         },
         async updateStatus(id: string, status: string) {
             const { error } = await supabase.from('quotes').update({ status }).eq('id', id);
+            if (error) throw error;
+        },
+        registerFollowup: async (id: string) => {
+            const now = new Date().toISOString();
+            const { error } = await supabase.from('quotes')
+                .update({ last_followup_at: now })
+                .eq('id', id);
             if (error) throw error;
         },
         delete: async (id: string) => {
@@ -498,51 +580,61 @@ export const api = {
         }
     },
     inventory: {
-        registerTransaction: async (transaction: Omit<InventoryTransaction, 'id'>, newStockValue?: number) => {
-            // 1. Update Database Stock
-            if (transaction.type === 'adjustment' && newStockValue !== undefined) {
-                // Set absolute stock
-                const { error } = await supabase.from('products').update({ stock: newStockValue }).eq('id', transaction.productId);
-                if (error) throw error;
-            } else {
-                // Increment/Decrement
-                // We need to fetch current again to be safe? Or rely on what we have? 
-                // Database increment is safer for concurrency but for now read-modify-write is okay for this scale
-                const { data: product, error: fetchError } = await supabase.from('products').select('stock').eq('id', transaction.productId).single();
-                if (fetchError) throw fetchError;
+        registerTransaction: async (transaction: Omit<InventoryTransaction, 'id' | 'createdAt'> & { productId: string }) => {
+            // 1. Update Product Stock (DB)
+            const { data: product, error: fetchError } = await supabase.from('products').select('stock').eq('id', transaction.productId).single();
+            if (fetchError) throw fetchError;
 
-                let change = transaction.quantity;
-                if (transaction.type === 'out') change = -transaction.quantity;
-
-                const currentStock = Number(product.stock) || 0;
-                const finalStock = currentStock + change;
-
-                const { error } = await supabase.from('products').update({ stock: finalStock }).eq('id', transaction.productId);
-                if (error) throw error;
+            // Determine stock change
+            let qty = transaction.quantityChange;
+            // Ensure sign is correct based on type if not already
+            if (['out', 'production_deduction', 'sale'].includes(transaction.type) && qty > 0) {
+                qty = -qty;
+            }
+            if (['in', 'purchase', 'return'].includes(transaction.type) && qty < 0) {
+                qty = -qty; // Should be positive
             }
 
-            // 2. Save Transaction Locally (as per plan, no DB table for transactions yet)
-            try {
-                const stored = localStorage.getItem('inventory_transactions');
-                const transactions = stored ? JSON.parse(stored) : [];
-                const newTransaction = { ...transaction, id: crypto.randomUUID() };
-                transactions.push(newTransaction);
+            // If manual adjustment, the quantityChange passed is usually the DELTA. 
+            // If the UI passes the TARGET stock, we need to calculate delta, but let's assume UI passes delta.
 
-                // Keep last 100
-                if (transactions.length > 100) transactions.shift();
+            const newStock = (product?.stock || 0) + qty;
+            const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', transaction.productId);
+            if (error) throw error;
 
-                localStorage.setItem('inventory_transactions', JSON.stringify(transactions));
-                // Dispatch event so other components can update
-                window.dispatchEvent(new Event('inventory_update'));
-            } catch (e) {
-                console.warn("Failed to save local transaction log", e);
-            }
+            // 2. Insert Transaction (DB)
+            const { error: logError } = await supabase.from('inventory_transactions').insert({
+                product_id: transaction.productId,
+                quantity_change: qty,
+                type: transaction.type,
+                reference_id: transaction.referenceId,
+                notes: transaction.notes,
+                user_id: (await supabase.auth.getUser()).data.user?.id
+            });
+            if (logError) throw logError;
         },
-        getHistory: () => {
-            try {
-                const stored = localStorage.getItem('inventory_transactions');
-                return stored ? JSON.parse(stored) : [];
-            } catch { return []; }
+        getHistory: async (productId: string) => {
+            const { data, error } = await supabase
+                .from('inventory_transactions')
+                .select(`
+                    *,
+                    app_users (name)
+                `)
+                .eq('product_id', productId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            return data.map((t: any) => ({
+                id: t.id,
+                productId: t.product_id,
+                quantityChange: t.quantity_change,
+                type: t.type,
+                referenceId: t.reference_id,
+                notes: t.notes,
+                createdAt: t.created_at,
+                userName: t.app_users?.name || 'Sistema'
+            })) as InventoryTransaction[];
         },
         deductFromQuote: async (quote: Quote) => {
             if (quote.stockDeducted) return;
@@ -552,28 +644,58 @@ export const api = {
             for (const item of quote.items) {
                 if (!item.productId) continue;
 
-                // Fetch product to know unit type
-                const { data: product } = await supabase.from('products').select('unit_type, name').eq('id', item.productId).single();
+                // Fetch product to know unit type AND composition
+                const { data: product } = await supabase.from('products').select('unit_type, name, is_composite, composition').eq('id', item.productId).single();
                 if (!product) continue;
 
-                let quantityToDeduct = item.quantity;
+                // RECURSIVE DEDUCTION LOGIC
+                if (product.is_composite && product.composition && product.composition.length > 0) {
+                    // Deduct each component
+                    for (const comp of product.composition) {
+                        const totalComponentQty = item.quantity * comp.quantity;
 
-                // Heuristic: If user sells m2, calculate area
-                if (['m2', 'm²', 'metro quadrado'].includes(product.unit_type?.toLowerCase())) {
-                    const widthM = (item.width || 0) / 100;
-                    const heightM = (item.height || 0) / 100;
-                    const area = widthM * heightM * item.quantity;
-                    if (area > 0) quantityToDeduct = area;
+                        // Calculate new stock and Log
+                        // We duplicate logic here for atomic DB operations
+                        const { data: compProd } = await supabase.from('products').select('stock').eq('id', comp.productId).single();
+                        if (compProd) {
+                            const newStock = (compProd.stock || 0) - totalComponentQty;
+                            await supabase.from('products').update({ stock: newStock }).eq('id', comp.productId);
+
+                            await supabase.from('inventory_transactions').insert({
+                                product_id: comp.productId,
+                                quantity_change: -totalComponentQty,
+                                type: 'production_deduction',
+                                reference_id: quote.id,
+                                notes: `Produção Kit #${quote.id.slice(0, 8)} - ${product.name} (Comp)`
+                            });
+                        }
+                    }
+                } else {
+                    // STANDARD DEDUCTION
+                    let quantityToDeduct = item.quantity;
+
+                    // Heuristic: If user sells m2, calculate area
+                    if (['m2', 'm²', 'metro quadrado'].includes(product.unit_type?.toLowerCase())) {
+                        const widthM = (item.width || 0) / 100;
+                        const heightM = (item.height || 0) / 100;
+                        const area = widthM * heightM * item.quantity;
+                        if (area > 0) quantityToDeduct = area;
+                    }
+
+                    const { data: prod } = await supabase.from('products').select('stock').eq('id', item.productId).single();
+                    if (prod) {
+                        const newStock = (prod.stock || 0) - quantityToDeduct;
+                        await supabase.from('products').update({ stock: newStock }).eq('id', item.productId);
+
+                        await supabase.from('inventory_transactions').insert({
+                            product_id: item.productId,
+                            quantity_change: -quantityToDeduct,
+                            type: 'production_deduction',
+                            reference_id: quote.id,
+                            notes: `Produção Pedido #${quote.id.slice(0, 8)} - ${product.name}`
+                        });
+                    }
                 }
-
-                // Register transaction
-                await api.inventory.registerTransaction({
-                    productId: item.productId,
-                    quantity: quantityToDeduct,
-                    type: 'out',
-                    date: new Date().toISOString(),
-                    reason: `Produção Pedido #${quote.id.slice(0, 8)} - ${product.name}`
-                });
             }
 
             // Mark as deducted
@@ -593,7 +715,7 @@ export const api = {
         getBalance: async (userId: string) => {
             // Calculate commission for all 'delivered' or 'finished' quotes that haven't been paid
             const { data: quotes, error } = await supabase.from('quotes')
-                .select('active, status, total_amount, commission_paid, user_id, design_fee, install_fee, discount, commission_percent')
+                .select('status, total_amount, commission_paid, user_id, design_fee, install_fee, discount, commission_percent')
                 .eq('user_id', userId)
                 .in('status', ['delivered'])
                 .eq('commission_paid', false);
@@ -657,6 +779,66 @@ export const api = {
                 .in('status', ['delivered'])
                 .eq('commission_paid', false);
 
+            if (error) throw error;
+        }
+    },
+    categories: {
+        list: async () => {
+            const { data, error } = await supabase.from('product_categories').select('*').order('name');
+            if (error) {
+                console.warn("Error fetching categories (table might not exist yet):", error);
+                return [] as ProductCategory[];
+            }
+            return data as ProductCategory[];
+        },
+        create: async (name: string) => {
+            const { error } = await supabase.from('product_categories').insert({ name });
+            if (error) throw error;
+        },
+        delete: async (id: string) => {
+            const { error } = await supabase.from('product_categories').delete().eq('id', id);
+            if (error) throw error;
+        }
+    },
+    suppliers: {
+        list: async () => {
+            const { data, error } = await supabase.from('suppliers').select('*').order('name');
+            if (error) throw error;
+            return data.map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                contactName: s.contact_name,
+                phone: s.phone,
+                email: s.email,
+                category: s.category,
+                active: s.active
+            })) as Supplier[];
+        },
+        create: async (supplier: Partial<Supplier>) => {
+            const { data, error } = await supabase.from('suppliers').insert({
+                name: supplier.name,
+                contact_name: supplier.contactName,
+                phone: supplier.phone,
+                email: supplier.email,
+                category: supplier.category,
+                active: supplier.active ?? true
+            }).select().single();
+            if (error) throw error;
+            return data;
+        },
+        update: async (id: string, updates: Partial<Supplier>) => {
+            const { error } = await supabase.from('suppliers').update({
+                name: updates.name,
+                contact_name: updates.contactName,
+                phone: updates.phone,
+                email: updates.email,
+                category: updates.category,
+                active: updates.active
+            }).eq('id', id);
+            if (error) throw error;
+        },
+        delete: async (id: string) => {
+            const { error } = await supabase.from('suppliers').delete().eq('id', id);
             if (error) throw error;
         }
     }

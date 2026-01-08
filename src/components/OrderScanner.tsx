@@ -19,7 +19,15 @@ const OrderScanner: React.FC<OrderScannerProps> = ({ quotes, customers, onClose 
     // Ref to hold the scanner instance
     const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
+    // Products state for lookup
+    const [products, setProducts] = useState<any[]>([]);
+
     useEffect(() => {
+        // Fetch products for composition lookup
+        import('../services/api').then(({ api }) => {
+            api.products.list().then(setProducts).catch(console.error);
+        });
+
         // Cleanup on unmount
         return () => {
             if (html5QrCodeRef.current && isScanning) {
@@ -250,13 +258,30 @@ const OrderScanner: React.FC<OrderScannerProps> = ({ quotes, customers, onClose 
                                                                 {(item.labelData.areaM2 * item.quantity).toFixed(2)} m² • {item.labelData.singleWidth}x{item.labelData.singleHeight}cm
                                                             </span>
                                                         </div>
-                                                    ) : (
-                                                        <span className="text-[10px] bg-white/5 px-2 py-1 rounded text-secondary font-medium uppercase tracking-wide border border-white/5">
-                                                            {item.width && item.height
-                                                                ? `${item.width}m x ${item.height}m`
-                                                                : `${item.quantity} un`}
-                                                        </span>
-                                                    )}
+                                                    ) : (() => {
+                                                        const product = products.find(p => p.id === item.productId);
+                                                        if (product?.isComposite && product.composition && product.composition.length > 0) {
+                                                            return (
+                                                                <div className="text-[10px] text-zinc-400 mt-1">
+                                                                    <div className="uppercase font-bold text-cyan-500 mb-0.5">COMPOSIÇÃO:</div>
+                                                                    {product.composition.map((c: any, ci: number) => {
+                                                                        const cName = products.find(p => p.id === c.productId)?.name || 'Item';
+                                                                        return (
+                                                                            <div key={ci}>• {c.quantity * item.quantity}x {cName}</div>
+                                                                        );
+                                                                    })}
+                                                                    <span className="text-[9px] italic opacity-50">*Verifique a OS impressa para detalhes.</span>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <span className="text-[10px] bg-white/5 px-2 py-1 rounded text-secondary font-medium uppercase tracking-wide border border-white/5">
+                                                                {item.width && item.height
+                                                                    ? `${item.width}m x ${item.height}m`
+                                                                    : `${item.quantity} un`}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                         </div>

@@ -7,6 +7,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { suggestPrice } from '../services/geminiService';
 import { Skeleton } from './ui/skeleton';
+import CategoryManager from './CategoryManager';
+
 
 interface ProductListProps {
   // Local state management replaced by React Query
@@ -50,12 +52,30 @@ const ProductList: React.FC<ProductListProps> = ({ costPerHour, finConfig, initi
     reason: ''
   });
 
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+
   // --- REACT QUERY ---
-  const { data: products = [], isLoading } = useQuery({
+  // Queries
+  const { data: products = [], isLoading: isLoadingProd } = useQuery({
     queryKey: ['products'],
     queryFn: api.products.list,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5, // 5 min
   });
+
+  const { data: suppliers = [], isLoading: isLoadingSupp } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: api.suppliers.list,
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const isLoading = isLoadingProd || isLoadingSupp;
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: api.categories.list,
+    staleTime: 1000 * 60 * 5
+  });
+
 
   const createMutation = useMutation({
     mutationFn: api.products.create,
@@ -70,7 +90,7 @@ const ProductList: React.FC<ProductListProps> = ({ costPerHour, finConfig, initi
   });
 
   const updateMutation = useMutation({
-    mutationFn: api.products.update,
+    mutationFn: (data: Product) => api.products.update(data.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Material atualizado com sucesso!');
@@ -229,7 +249,7 @@ const ProductList: React.FC<ProductListProps> = ({ costPerHour, finConfig, initi
     if (editingProduct) {
       updateMutation.mutate({ ...editingProduct, ...cleanData, salePrice });
     } else {
-      createMutation.mutate({ id: crypto.randomUUID(), ...cleanData, salePrice });
+      createMutation.mutate({ ...cleanData, salePrice });
     }
   };
 
@@ -260,8 +280,13 @@ const ProductList: React.FC<ProductListProps> = ({ costPerHour, finConfig, initi
 
       const result = await suggestPrice(formData.name, formData.category, Number(cost));
       setSuggestions(result);
-    } catch (e) {
-      toast.error("Erro ao consultar inteligência artificial.");
+    } catch (e: any) {
+      console.error("AI Analysis Error:", e);
+      if (e.message?.includes('API Key')) {
+        toast.error("Erro: Chave de API do Google Gemini não configurada.");
+      } else {
+        toast.error("Erro ao consultar inteligência artificial.");
+      }
     } finally {
       setIsSuggesting(false);
     }
@@ -307,9 +332,13 @@ const ProductList: React.FC<ProductListProps> = ({ costPerHour, finConfig, initi
               className="w-full pl-10 pr-4 py-2.5 bg-input/50 border border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/50 shadow-sm outline-none text-primary placeholder-secondary"
             />
           </div>
+          <button onClick={() => setIsCategoryManagerOpen(true)} className="bg-surface hover:bg-surface-hover text-secondary hover:text-white px-4 py-3 rounded-xl font-bold uppercase text-[10px] tracking-widest flex items-center gap-2 border border-white/10 transition-all">
+            <Layers size={16} /> Categorias
+          </button>
           <button onClick={() => handleOpenModal()} className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(217,70,239,0.4)] transition-all active:scale-95 whitespace-nowrap border border-fuchsia-500/20">
             <Plus size={20} /> Novo Material
           </button>
+
         </div>
       </div>
 
@@ -442,7 +471,21 @@ const ProductList: React.FC<ProductListProps> = ({ costPerHour, finConfig, initi
                       <option value="un" className="bg-surface">Unidade (Peça)</option>
                       <option value="ml" className="bg-surface">Metro Linear</option>
                     </select>
-                    <input type="text" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className="px-4 py-3 bg-input border border-white/10 rounded-2xl font-bold text-primary placeholder-secondary focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="Categoria" />
+                    <div className="relative">
+                      <select
+                        value={formData.category}
+                        onChange={e => setFormData({ ...formData, category: e.target.value })}
+                        className="w-full px-4 py-3 bg-input border border-white/10 rounded-2xl font-bold text-primary appearance-none outline-none focus:ring-2 focus:ring-cyan-500"
+                      >
+                        <option value="" disabled>Selecione a Categoria</option>
+                        {categories.map((cat: any) => (
+                          <option key={cat.id} value={cat.name} className="bg-surface">{cat.name}</option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-secondary">
+                        <Layers size={16} />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -548,35 +591,6 @@ const ProductList: React.FC<ProductListProps> = ({ costPerHour, finConfig, initi
 
                 {!formData.isComposite && (
                   <div className="flex justify-end mb-4">
-                    <button
-                      type="button"
-                      onClick={handleAiAnalysis}
-                      disabled={isSuggesting || !formData.name || formData.costPrice <= 0}
-                      className="text-xs font-bold text-fuchsia-400 hover:text-fuchsia-300 flex items-center gap-2 transition-colors uppercase tracking-widest disabled:opacity-50"
-                    >
-                      {isSuggesting ? <span className="animate-pulse">Consultando Gemini AI...</span> : <><TrendingUp size={14} /> Consultar Preço de Mercado (IA)</>}
-                    </button>
-                  </div>
-                )}
-
-                {suggestions && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 animate-in slide-in-from-top-4 fade-in">
-                    <div className="bg-emerald-900/40 border border-emerald-500/20 p-4 rounded-2xl cursor-pointer hover:bg-emerald-900/60 transition-colors" onClick={() => setFormData({ ...formData, wastePercent: 0, productionTimeMinutes: 0, costPrice: suggestions.conservative })}>
-                      <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mb-1">Conservador</p>
-                      <p className="text-xl font-black text-white">R$ {suggestions.conservative.toFixed(2)}</p>
-                    </div>
-                    <div className="bg-blue-900/40 border border-blue-500/20 p-4 rounded-2xl relative overflow-hidden cursor-pointer hover:bg-blue-900/60 transition-colors">
-                      <div className="absolute top-0 right-0 bg-blue-500 text-white text-[8px] font-bold px-2 py-1 rounded-bl-lg">MERCADO</div>
-                      <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-1">Moderado</p>
-                      <p className="text-xl font-black text-white">R$ {suggestions.moderate.toFixed(2)}</p>
-                    </div>
-                    <div className="bg-fuchsia-900/40 border border-fuchsia-500/20 p-4 rounded-2xl cursor-pointer hover:bg-fuchsia-900/60 transition-colors">
-                      <p className="text-[10px] text-fuchsia-400 font-black uppercase tracking-widest mb-1">Premium</p>
-                      <p className="text-xl font-black text-white">R$ {suggestions.aggressive.toFixed(2)}</p>
-                    </div>
-                    <div className="md:col-span-3 text-[10px] text-zinc-400 italic text-center bg-black/20 p-2 rounded-lg">
-                      💡 "IA: {suggestions.reasoning}"
-                    </div>
                   </div>
                 )}
 
@@ -685,8 +699,10 @@ const ProductList: React.FC<ProductListProps> = ({ costPerHour, finConfig, initi
           </div>
         </div>
       )}
+      <CategoryManager isOpen={isCategoryManagerOpen} onClose={() => setIsCategoryManagerOpen(false)} />
     </div>
   );
 };
+
 
 export default ProductList;

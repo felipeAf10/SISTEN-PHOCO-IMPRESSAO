@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { supabase } from "./supabase";
 import { Customer, QuoteItem } from "../types";
 
 // Initialize the API lazily
@@ -12,7 +13,7 @@ const getGenAI = () => {
   return new GoogleGenerativeAI(apiKey);
 };
 
-const FALLBACK_MEASUREMENTS: Record<string, any> = {
+export const FALLBACK_MEASUREMENTS: Record<string, any> = {
   'small': {
     capo: { w: 1.2, h: 0.9 }, teto: { w: 1.1, h: 1.4 }, porta_malas: { w: 1.1, h: 0.6 },
     paralamas_dianteiros: { w: 0.8, h: 0.6 }, portas_dianteiras: { w: 0.9, h: 0.6 },
@@ -35,7 +36,7 @@ const FALLBACK_MEASUREMENTS: Record<string, any> = {
   }
 };
 
-const getFallbackDimensions = (model: string) => {
+export const getFallbackDimensions = (model: string) => {
   const lowerModel = model.toLowerCase();
   if (lowerModel.includes('saveiro') || lowerModel.includes('strada') || lowerModel.includes('toro') || lowerModel.includes('ranger') || lowerModel.includes('hilux') || lowerModel.includes('s10')) return FALLBACK_MEASUREMENTS['pickup'];
   if (lowerModel.includes('suv') || lowerModel.includes('jeep') || lowerModel.includes('compass') || lowerModel.includes('creta') || lowerModel.includes('hrv')) return FALLBACK_MEASUREMENTS['suv'];
@@ -44,6 +45,24 @@ const getFallbackDimensions = (model: string) => {
 };
 
 export const getVehicleMeasurements = async (make: string, model: string, year: string): Promise<any> => {
+  // 1. Check Cache (Supabase)
+  try {
+    const { data, error } = await supabase
+      .from('vehicle_measurements_cache')
+      .select('dimensions')
+      .eq('make', make)
+      .eq('model', model)
+      .eq('year', year)
+      .single();
+
+    if (data && data.dimensions) {
+      console.log("Vehicle found in cache!");
+      return data.dimensions;
+    }
+  } catch (err) {
+    console.warn("Cache check failed, proceeding to AI...", err);
+  }
+
   const genAI = getGenAI();
 
   // Offline Fallback immediately if no API
@@ -61,7 +80,7 @@ export const getVehicleMeasurements = async (make: string, model: string, year: 
   1. Seja REALISTA: Um capô de Saveiro 93 tem aprox. 1.35m x 0.95m. Jamais retorne áreas absurdas como 2m².
   2. Sangria: Adicione EXATAMENTE 0.05m (5cm) de sobra em cada lado para aplicação.
   3. Veículo 2 portas: Se o modelo for 2 portas (como Saveiro), 'portas_traseiras' DEVE ser {w:0, h:0}.
-  4. Formato: Retorne um JSON rigoroso com as chaves: capo, paralamas_dianteiros, portas_dianteiras, portas_traseiras, teto, colunas, porta_malas, traseira, para_choque_dianteiro, para_choque_traseiro, vidro_traseiro_microperfurado.
+  4. Formato: Retorne um JSON rigoroso com as chaves: capo, paralamas_dianteiros, portas_dianteiras, portas_traseiras, teto, colunas, porta_malas, traseira, parachoque_dianteiro, parachoque_traseiro, vidro_traseiro_microperfurado, laterais.
   5. Cada chave deve conter um objeto {w: número, h: número}.
   
   IMPORTANTE: Retorne APENAS o JSON, sem markdown, sem aspas triplas.`;
@@ -75,7 +94,18 @@ export const getVehicleMeasurements = async (make: string, model: string, year: 
     const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
     if (!cleanText) throw new Error("Resposta vazia da IA");
-    return JSON.parse(cleanText);
+    const dimensions = JSON.parse(cleanText);
+
+    // 2. Save to Cache
+    try {
+      await supabase.from('vehicle_measurements_cache').insert({
+        make, model, year, dimensions
+      });
+    } catch (saveErr) {
+      console.warn("Failed to save to cache", saveErr);
+    }
+
+    return dimensions;
   } catch (error) {
     console.error("Erro GeminiService:", error);
     // On error, use fallback

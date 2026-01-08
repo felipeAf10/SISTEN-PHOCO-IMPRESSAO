@@ -55,6 +55,18 @@ export interface Product {
   salePrice: number;
   stock: number;
   availableRollWidths?: number[];
+  supplierId?: string;
+  minStock?: number;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  category?: string;
+  active: boolean;
 }
 
 export interface FixedAsset {
@@ -138,6 +150,8 @@ export interface Quote {
   commissionDate?: string;
   commissionPercent?: number; // Snapshot at creation
   stockDeducted?: boolean; // Inventory control
+  lastFollowupAt?: string; // CRM Automation
+  previewUrl?: string | null; // Production thumbnail
 }
 
 export type ScheduleEventType = 'ligar' | 'reuniao' | 'medicao' | 'entrega' | 'email' | 'almoco' | 'visita' | 'outro';
@@ -170,16 +184,17 @@ export interface TimeRecord {
 
 
 
-export type AppView = 'dashboard' | 'products' | 'customers' | 'quotes' | 'production' | 'financial' | 'new-quote' | 'scheduling' | 'access-control' | 'time-clock' | 'hours-management' | 'inventory' | 'commissions' | 'sales-pipeline' | 'scanner' | 'laser-calc' | 'vector-lab';
+export type AppView = 'dashboard' | 'products' | 'customers' | 'quotes' | 'production' | 'financial' | 'new-quote' | 'scheduling' | 'access-control' | 'time-clock' | 'hours-management' | 'inventory' | 'commissions' | 'sales-pipeline' | 'scanner' | 'laser-calc' | 'vector-lab' | 'suppliers';
 
 export interface InventoryTransaction {
   id: string;
   productId: string;
-  productName: string;
-  type: 'in' | 'out' | 'adjustment';
-  quantity: number;
-  reason: string;
-  date: string;
+  productName?: string;
+  type: 'in' | 'out' | 'adjustment' | 'sale' | 'purchase' | 'production_deduction' | 'return';
+  quantityChange: number;
+  referenceId?: string;
+  notes?: string;
+  createdAt: string;
   userId?: string;
   userName?: string;
 }

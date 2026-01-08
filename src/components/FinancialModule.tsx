@@ -3,6 +3,7 @@ import { Plus, Trash2, Calculator, Timer, TrendingUp, Wallet, Users, Edit2, Chec
 import { Quote, FixedAsset, FixedCost, FinancialConfig } from '../types';
 import { api } from '../services/api';
 import ProfitabilityDashboard from './ProfitabilityDashboard';
+import CashFlowForecast from './CashFlowForecast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Skeleton } from './ui/skeleton';
@@ -13,7 +14,7 @@ interface FinancialModuleProps {
 
 const FinancialModule: React.FC<FinancialModuleProps> = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'config'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'config' | 'cashflow'>('dashboard');
 
   const [assetName, setAssetName] = useState('');
   const [assetVal, setAssetVal] = useState(0);
@@ -49,7 +50,19 @@ const FinancialModule: React.FC<FinancialModuleProps> = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  const isLoading = isLoadingAssets || isLoadingCosts || isLoadingConfig || isLoadingQuotes;
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['products'],
+    queryFn: api.products.list,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ['customers'],
+    queryFn: api.customers.list,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const isLoading = isLoadingAssets || isLoadingCosts || isLoadingConfig || isLoadingQuotes || isLoadingProducts || isLoadingCustomers;
 
   // --- MUTATIONS ---
   const saveAssetMutation = useMutation({
@@ -192,10 +205,27 @@ const FinancialModule: React.FC<FinancialModuleProps> = () => {
       <div className="p-6 h-full flex flex-col">
         <div className="flex gap-4 mb-6 shrink-0">
           <button onClick={() => setActiveTab('dashboard')} className="px-6 py-2 bg-emerald-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20">Resultados</button>
+          <button onClick={() => setActiveTab('cashflow')} className="px-6 py-2 bg-surface hover:bg-surface-hover text-secondary rounded-xl font-bold text-sm transition-colors border border-white/5">Fluxo de Caixa</button>
           <button onClick={() => setActiveTab('config')} className="px-6 py-2 bg-surface hover:bg-surface-hover text-secondary rounded-xl font-bold text-sm transition-colors border border-white/5">Configurações e Despesas</button>
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <ProfitabilityDashboard quotes={quotes} finConfig={currentConfig} />
+          <ProfitabilityDashboard quotes={quotes} finConfig={currentConfig} products={products} customers={customers} />
+        </div>
+      </div>
+    );
+  }
+
+  // CASH FLOW VIEW
+  if (activeTab === 'cashflow') {
+    return (
+      <div className="p-6 h-full flex flex-col">
+        <div className="flex gap-4 mb-6 shrink-0">
+          <button onClick={() => setActiveTab('dashboard')} className="px-6 py-2 bg-surface hover:bg-surface-hover text-secondary rounded-xl font-bold text-sm transition-colors border border-white/5">Resultados</button>
+          <button onClick={() => setActiveTab('cashflow')} className="px-6 py-2 bg-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/20">Fluxo de Caixa</button>
+          <button onClick={() => setActiveTab('config')} className="px-6 py-2 bg-surface hover:bg-surface-hover text-secondary rounded-xl font-bold text-sm transition-colors border border-white/5">Configurações e Despesas</button>
+        </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <CashFlowForecast quotes={quotes} fixedCosts={fixedCosts} />
         </div>
       </div>
     );
@@ -206,6 +236,7 @@ const FinancialModule: React.FC<FinancialModuleProps> = () => {
     <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500 h-full overflow-y-auto custom-scrollbar">
       <div className="flex gap-4 mb-2">
         <button onClick={() => setActiveTab('dashboard')} className="px-6 py-2 bg-surface hover:bg-surface-hover text-secondary rounded-xl font-bold text-sm transition-colors border border-white/5">Resultados</button>
+        <button onClick={() => setActiveTab('cashflow')} className="px-6 py-2 bg-surface hover:bg-surface-hover text-secondary rounded-xl font-bold text-sm transition-colors border border-white/5">Fluxo de Caixa</button>
         <button onClick={() => setActiveTab('config')} className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/20">Configurações e Despesas</button>
       </div>
 

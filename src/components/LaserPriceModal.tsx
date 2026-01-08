@@ -6,9 +6,10 @@ interface LaserPriceModalProps {
     onClose: () => void;
     onConfirm: (item: any) => void;
     activeProduct: any;
+    products: any[]; // Receive full product list
 }
 
-const LaserPriceModal: React.FC<LaserPriceModalProps> = ({ isOpen, onClose, onConfirm, activeProduct }) => {
+const LaserPriceModal: React.FC<LaserPriceModalProps> = ({ isOpen, onClose, onConfirm, activeProduct, products = [] }) => {
     const [mode, setMode] = useState<'cut' | 'engrave' | 'promotional'>('cut');
 
     // Laser/CNC Params
@@ -20,16 +21,15 @@ const LaserPriceModal: React.FC<LaserPriceModalProps> = ({ isOpen, onClose, onCo
     const [materialArea, setMaterialArea] = useState({ w: 0, h: 0 }); // meters
 
     // Promotional Params
-    const [selectedPromoId, setSelectedPromoId] = useState('caneta-metal');
+    const [selectedPromoId, setSelectedPromoId] = useState('');
     const [promoQty, setPromoQty] = useState(100);
     const [supplyProduct, setSupplyProduct] = useState(true);
 
-    const PROMO_PRODUCTS = [
-        { id: 'caneta-metal', name: 'Caneta Metálica', cost: 4.50, suggestedMarkup: 2.0 },
-        { id: 'chaveiro-acrilico', name: 'Chaveiro Acrílico', cost: 1.80, suggestedMarkup: 2.5 },
-        { id: 'garrafa-termica', name: 'Garrafa Térmica', cost: 35.00, suggestedMarkup: 1.8 },
-        { id: 'agenda-couro', name: 'Agenda Couro', cost: 22.00, suggestedMarkup: 1.9 },
-    ];
+    // Filter products for "Brindes" category
+    const promoProducts = products.filter(p =>
+        p.category.toLowerCase().includes('brinde') ||
+        p.category.toLowerCase().includes('promocional')
+    );
 
     const COSTS = {
         machineHour: 120.00, // R$ 120/h
@@ -42,13 +42,30 @@ const LaserPriceModal: React.FC<LaserPriceModalProps> = ({ isOpen, onClose, onCo
         }
     }, [activeProduct]);
 
+    // Auto-select first promo product if available
+    useEffect(() => {
+        if (mode === 'promotional' && promoProducts.length > 0 && !selectedPromoId) {
+            setSelectedPromoId(promoProducts[0].id);
+        }
+    }, [mode, promoProducts, selectedPromoId]);
+
     const calculateTotal = () => {
         let total = 0;
 
         if (mode === 'promotional') {
-            const product = PROMO_PRODUCTS.find(p => p.id === selectedPromoId);
-            const productCost = supplyProduct ? (product?.cost || 0) * (product?.suggestedMarkup || 1) : 0;
-            const engravingCost = (machineTime * (COSTS.machineHour / 60)); // Cost per unit
+            const product = promoProducts.find(p => p.id === selectedPromoId);
+            // Use product sale price (which includes markup/margin already in the system) or cost?
+            // User said "não tenho como cadastrar e colocar valor de custo". 
+            // If they register in ProductList, they set Cost + Margin = Sale Price.
+            // Usually for a quote, we use the Sale Price.
+            // But here the user might want to calculate: (Cost * Markup) + Service.
+            // The previous hardcoded logic was: cost * suggestedMarkup.
+            // Let's use the product's Sale Price as the base "Product Cost" for the customer, plus the service.
+
+            const productUnitLocationPrice = product ? product.salePrice : 0;
+
+            const productCost = supplyProduct ? productUnitLocationPrice : 0;
+            const engravingCost = (machineTime * (COSTS.machineHour / 60)); // Cost per unit (service)
 
             total = (productCost + engravingCost) * promoQty + setupFee;
         } else {
@@ -65,10 +82,23 @@ const LaserPriceModal: React.FC<LaserPriceModalProps> = ({ isOpen, onClose, onCo
     const total = calculateTotal();
 
     const handleConfirm = () => {
+        let description = '';
+        let details = {};
+
+        if (mode === 'promotional') {
+            const product = promoProducts.find(p => p.id === selectedPromoId);
+            const prodName = product ? product.name : 'Brinde Personalizado';
+            description = `Brindes - ${prodName} (x${promoQty})`;
+            details = { mode, productId: selectedPromoId, productName: prodName, machineTime, setupFee, quantity: promoQty };
+        } else {
+            description = `${mode === 'cut' ? 'Corte Laser' : 'Gravação'} - ${material}`;
+            details = { mode, material, thickness, machineTime, setupFee, quantity: 1 };
+        }
+
         onConfirm({
             type: 'laser',
-            description: `${mode === 'promotional' ? 'Brindes' : mode === 'cut' ? 'Corte Laser' : 'Gravação'} - ${material}`,
-            details: { mode, material, thickness, machineTime, setupFee, quantity: mode === 'promotional' ? promoQty : 1 },
+            description,
+            details,
             total: total
         });
         onClose();
@@ -125,12 +155,18 @@ const LaserPriceModal: React.FC<LaserPriceModalProps> = ({ isOpen, onClose, onCo
                         {mode === 'promotional' ? (
                             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Produto Base</label>
-                                    <select value={selectedPromoId} onChange={e => setSelectedPromoId(e.target.value)} className="w-full px-5 py-4 bg-input border border-white/10 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500 text-white">
-                                        {PROMO_PRODUCTS.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name} - Unit. R$ {p.cost.toFixed(2)}</option>
-                                        ))}
-                                    </select>
+                                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Produto Base (Categoria: Brindes)</label>
+                                    {promoProducts.length > 0 ? (
+                                        <select value={selectedPromoId} onChange={e => setSelectedPromoId(e.target.value)} className="w-full px-5 py-4 bg-input border border-white/10 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500 text-white">
+                                            {promoProducts.map(p => (
+                                                <option key={p.id} value={p.id}>{p.name} - Unit. R$ {p.salePrice.toFixed(2)}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs font-bold">
+                                            Nenhum produto encontrado na categoria "Brindes". Cadastre materiais com esta categoria primeiro.
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-secondary uppercase tracking-widest">Quantidade</label>
@@ -172,7 +208,7 @@ const LaserPriceModal: React.FC<LaserPriceModalProps> = ({ isOpen, onClose, onCo
                         <div className="bg-surface/30 border border-white/5 p-6 rounded-[2rem] space-y-4">
                             <div className="flex items-center gap-3 mb-2">
                                 <Clock className="text-amber-500" size={20} />
-                                <h4 className="font-black text-amber-500 uppercase text-xs tracking-widest">Tempo de Máquina</h4>
+                                <h4 className="font-black text-amber-500 uppercase text-xs tracking-widest">Tempo de Máquina (Serviço)</h4>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
@@ -213,7 +249,7 @@ const LaserPriceModal: React.FC<LaserPriceModalProps> = ({ isOpen, onClose, onCo
                                 {mode === 'promotional' && (
                                     <div className="flex justify-between border-b border-black/10 pb-2">
                                         <span className="opacity-70">Produtos ({promoQty})</span>
-                                        <span>R$ {((supplyProduct ? (PROMO_PRODUCTS.find(p => p.id === selectedPromoId)?.cost || 0) * (PROMO_PRODUCTS.find(p => p.id === selectedPromoId)?.suggestedMarkup || 1) : 0) * promoQty).toFixed(2)}</span>
+                                        <span>R$ {((supplyProduct ? (promoProducts.find(p => p.id === selectedPromoId)?.salePrice || 0) : 0) * promoQty).toFixed(2)}</span>
                                     </div>
                                 )}
                             </div>

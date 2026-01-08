@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
+  Truck,
   LayoutDashboard, Package, Users, FileText, Plus, Menu, Search, TrendingUp, Settings,
   ClipboardList, Calculator, CalendarDays, ShieldAlert, LogOut, ChevronRight, Palette, Clock, Loader2, Zap
 } from 'lucide-react';
@@ -26,6 +27,7 @@ const ClientPortal = React.lazy(() => import('./components/ClientPortal'));
 const OrderScanner = React.lazy(() => import('./components/OrderScanner'));
 const LaserCalculator = React.lazy(() => import('./components/LaserCalculator'));
 const VectorizationLab = React.lazy(() => import('./components/VectorizationLab'));
+const SupplierManager = React.lazy(() => import('./components/SupplierManager'));
 
 import { api } from './services/api';
 import { supabase } from './lib/supabase';
@@ -109,7 +111,7 @@ const App: React.FC = () => {
         fetchWithLog('permissions', api.permissions.getAll())
       ]);
 
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Data fetch timeout')), 20000));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Data fetch timeout')), 60000));
 
       console.log("Waiting for Promise.all...");
       const [
@@ -272,22 +274,22 @@ const App: React.FC = () => {
 
   const navItems = [
     { id: 'dashboard', label: 'Painel Geral', icon: LayoutDashboard, permission: 'dashboard' },
-    { id: 'quotes', label: 'Orçamentos', icon: FileText, permission: 'quotes' },
-    { id: 'sales-pipeline', label: 'Pipeline de Vendas', icon: TrendingUp, permission: 'quotes' },
     { id: 'scheduling', label: 'Agenda & Prazos', icon: CalendarDays, permission: 'scheduling' },
-    { id: 'production', label: 'Produção', icon: ClipboardList, permission: 'production' },
-    { id: 'products', label: 'Materiais', icon: Package, permission: 'products' },
+    { id: 'laser-calc', label: 'Calculadora Laser', icon: Zap, permission: 'quotes' },
+    { id: 'customers', label: 'Clientes', icon: Users, permission: 'customers' },
+    { id: 'commissions', label: 'Comissões', icon: Calculator, permission: 'financial', adminOnly: true },
     { id: 'inventory', label: 'Estoque', icon: TrendingUp, permission: 'products' },
     { id: 'financial', label: 'Financeiro', icon: Calculator, permission: 'financial' },
-    { id: 'customers', label: 'Clientes', icon: Users, permission: 'customers' },
+    { id: 'suppliers', label: 'Fornecedores', icon: Truck, permission: 'products' },
+    { id: 'access-control', label: 'Gestão de Equipe', icon: ShieldAlert, permission: 'financial', adminOnly: true },
+    { id: 'hours-management', label: 'Gestão de Horas', icon: Users, permission: 'financial', adminOnly: true },
+    { id: 'products', label: 'Materiais', icon: Package, permission: 'products' },
+    { id: 'quotes', label: 'Orçamentos', icon: FileText, permission: 'quotes' },
+    { id: 'sales-pipeline', label: 'Pipeline de Vendas', icon: TrendingUp, permission: 'quotes' },
+    { id: 'production', label: 'Produção', icon: ClipboardList, permission: 'production' },
     { id: 'time-clock', label: 'RH / Ponto', icon: Clock, permission: 'time_clock' },
     { id: 'scanner', label: 'Scanner de Pedido', icon: ClipboardList, permission: 'production' },
-    { id: 'laser-calc', label: 'Calculadora Laser', icon: Zap, permission: 'quotes' },
     { id: 'vector-lab', label: 'Vetorizador (Beta)', icon: Palette, permission: 'production' },
-    { id: 'hours-management', label: 'Gestão de Horas', icon: Users, permission: 'financial', adminOnly: true },
-
-    { id: 'commissions', label: 'Comissões', icon: Calculator, permission: 'financial', adminOnly: true },
-    { id: 'access-control', label: 'Gestão de Equipe', icon: ShieldAlert, permission: 'financial', adminOnly: true },
   ];
 
   const visibleNavItems = useMemo(() => {
@@ -456,6 +458,7 @@ const App: React.FC = () => {
                 {activeView === 'financial' && permissions[user!.role].financial && <FinancialModule />}
                 {activeView === 'scheduling' && permissions[user!.role].scheduling && <SchedulingModule />}
                 {activeView === 'inventory' && <InventoryModule products={products} setProducts={setProducts} currentUser={user!} />}
+                {activeView === 'suppliers' && permissions[user!.role].products && <SupplierManager />}
                 {activeView === 'access-control' && user!.role === 'admin' && <AccessControl permissions={permissions} setPermissions={setPermissions} users={users} setUsers={setUsers} />}
                 {activeView === 'time-clock' && <TimeClock user={user!} />}
 

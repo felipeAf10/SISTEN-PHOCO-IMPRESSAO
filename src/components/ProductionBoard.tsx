@@ -92,21 +92,21 @@ const ProductionBoard: React.FC<ProductionBoardProps> = ({ quotes, setQuotes, cu
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
                               className={`bg-surface p-5 rounded-2xl shadow-sm border hover:shadow-lg transition-all group cursor-grab active:cursor-grabbing relative ${(() => {
-                                  if (['finished', 'delivered'].includes(quote.status)) return 'border-white/10 hover:border-brand-cyan/20';
-                                  const created = new Date(quote.date);
-                                  const deadline = quote.deadlineDays || 0;
-                                  const dueDate = new Date(created);
-                                  dueDate.setDate(dueDate.getDate() + deadline);
-                                  const today = new Date();
-                                  today.setHours(0, 0, 0, 0);
-                                  dueDate.setHours(0, 0, 0, 0);
-                                  const diffTime = dueDate.getTime() - today.getTime();
-                                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                if (['finished', 'delivered'].includes(quote.status)) return 'border-white/10 hover:border-brand-cyan/20';
+                                const created = new Date(quote.date);
+                                const deadline = quote.deadlineDays || 0;
+                                const dueDate = new Date(created);
+                                dueDate.setDate(dueDate.getDate() + deadline);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                dueDate.setHours(0, 0, 0, 0);
+                                const diffTime = dueDate.getTime() - today.getTime();
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                                  if (diffDays < 0) return 'border-rose-500 shadow-rose-500/10 hover:border-rose-500';
-                                  if (diffDays === 0) return 'border-amber-500 shadow-amber-500/10 hover:border-amber-500';
-                                  return 'border-white/10 hover:border-brand-cyan/20';
-                                })()
+                                if (diffDays < 0) return 'border-rose-500 shadow-rose-500/10 hover:border-rose-500';
+                                if (diffDays === 0) return 'border-amber-500 shadow-amber-500/10 hover:border-amber-500';
+                                return 'border-white/10 hover:border-brand-cyan/20';
+                              })()
                                 }`}
                             >
                               <button
@@ -162,17 +162,17 @@ const ProductionBoard: React.FC<ProductionBoardProps> = ({ quotes, setQuotes, cu
 
                               {/* Thumbnail Section */}
                               <div className="mb-4">
-                                {(quote as any).preview_url ? (
+                                {quote.previewUrl ? (
                                   <div className="relative w-full h-32 rounded-xl overflow-hidden group/img mb-2 shadow-sm">
-                                    <img src={(quote as any).preview_url} alt="Preview" className="w-full h-full object-cover" />
+                                    <img src={quote.previewUrl} alt="Preview" className="w-full h-full object-cover" />
                                     <button
                                       onClick={async (e) => {
                                         // Prevent Drag conflict
                                         e.preventDefault();
                                         e.stopPropagation();
                                         if (confirm('Remover imagem?')) {
-                                          await api.quotes.update({ ...quote, preview_url: null } as any);
-                                          setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, preview_url: null } as any : q));
+                                          await api.quotes.update({ ...quote, previewUrl: null });
+                                          setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, previewUrl: null } : q));
                                         }
                                       }}
                                       className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover/img:opacity-100 transition-opacity"
@@ -202,8 +202,8 @@ const ProductionBoard: React.FC<ProductionBoardProps> = ({ quotes, setQuotes, cu
 
                                           const publicUrl = api.storage.getPublicUrl(fileName);
 
-                                          await api.quotes.update({ ...quote, preview_url: publicUrl } as any);
-                                          setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, preview_url: publicUrl } as any : q));
+                                          await api.quotes.update({ ...quote, previewUrl: publicUrl });
+                                          setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, previewUrl: publicUrl } : q));
                                         } catch (err) {
                                           console.error("Upload failed", err);
                                           alert("Erro ao enviar imagem. Tente novamente.");

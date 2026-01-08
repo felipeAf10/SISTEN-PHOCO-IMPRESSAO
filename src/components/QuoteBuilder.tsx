@@ -108,11 +108,69 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
     staleTime: 1000 * 60 * 5
   });
 
+  const { data: dbCategories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: api.categories.list,
+    staleTime: 1000 * 60 * 5
+  });
+
+  // --- PERSISTENCE LOGIC ---
+  // Load draft on mount if not editing an existing quote
+  useEffect(() => {
+    if (!initialQuote) {
+      try {
+        const savedDraft = localStorage.getItem('quote_builder_draft');
+        if (savedDraft) {
+          const parsed = JSON.parse(savedDraft);
+          if (parsed && parsed.cart && parsed.cart.length > 0) {
+            setCart(parsed.cart);
+            if (parsed.selectedCustomerId) setSelectedCustomerId(parsed.selectedCustomerId);
+            if (parsed.designFee) setDesignFee(parsed.designFee);
+            if (parsed.installFee) setInstallFee(parsed.installFee);
+            if (parsed.deadlineDays) setDeadlineDays(parsed.deadlineDays);
+            if (parsed.discountPercent) setDiscountPercent(parsed.discountPercent);
+            if (parsed.paymentMethod) setPaymentMethod(parsed.paymentMethod);
+            if (parsed.downPaymentMethod) setDownPaymentMethod(parsed.downPaymentMethod);
+            if (parsed.notes) setNotes(parsed.notes);
+
+            toast.info("Rascunho recuperado automaticamente.");
+          }
+        }
+      } catch (e) {
+        console.error("Failed to restore draft", e);
+      }
+    }
+  }, [initialQuote]);
+
+  // Save to localStorage whenever relevant state changes
+  useEffect(() => {
+    if (!initialQuote) { // Only auto-save if we are creating a new quote (not editing)
+      const draftState = {
+        cart,
+        selectedCustomerId,
+        designFee,
+        installFee,
+        deadlineDays,
+        discountPercent,
+        paymentMethod,
+        downPaymentMethod,
+        notes,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('quote_builder_draft', JSON.stringify(draftState));
+    }
+  }, [cart, selectedCustomerId, designFee, installFee, deadlineDays, discountPercent, paymentMethod, downPaymentMethod, notes, initialQuote]);
+  // -------------------------
+
   const createQuoteMutation = useMutation({
     mutationFn: api.quotes.create,
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       toast.success('Orçamento salvo com sucesso!');
+
+      // Clear draft after successful creation
+      localStorage.removeItem('quote_builder_draft');
+
       setGeneratedQuoteId(variables.id);
       setIsGeneratingPitch(false); // Reset just in case
       onFinish();
@@ -124,16 +182,20 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
   // -------------------
 
   const categories = useMemo(() => {
+    // Priority: DB Categories > Product Derived Categories
+    if (dbCategories.length > 0) {
+      return ['Todos', ...dbCategories.map((c: any) => c.name)];
+    }
     const cats = Array.from(new Set(products.map(p => p.category)));
     return ['Todos', ...cats];
-  }, [products]);
+  }, [products, dbCategories]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchesCat = activeCategory === 'Todos' || p.category === activeCategory;
       const matchesSearch = p.name.toLowerCase().includes(productSearch.toLowerCase());
       return matchesCat && matchesSearch;
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name));
   }, [products, activeCategory, productSearch]);
 
   const paginatedProducts = useMemo(() => {
@@ -526,32 +588,43 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
             <div className="h-8 w-px bg-white/10 hidden xl:block mx-1"></div>
 
             {/* Quick Categories */}
-            <div className="flex gap-2 overflow-x-auto pb-1 w-full xl:w-auto custom-scrollbar items-center">
-              <span className="text-[10px] font-black uppercase text-secondary/50 tracking-widest mr-1 shrink-0">Filtros:</span>
-              {categories.map(cat => {
-                const Icon = CATEGORY_ICONS[cat] || CATEGORY_ICONS['Default'];
-                const isActive = activeCategory === cat;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => handleCategoryChange(cat)}
-                    className={`flex items - center gap - 2 px - 3 py - 2 rounded - lg whitespace - nowrap text - [11px] font - bold uppercase tracking - tight transition - all border ${isActive ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-surface hover:bg-surface-hover text-secondary border-white/5 hover:text-primary'} `}
-                  >
-                    <Icon size={12} />
-                    {cat}
-                  </button>
-                );
-              })}
+            {/* Quick Categories */}
+            <div className="flex-1 min-w-0 relative group/filters">
+              {/* Fade masks for scroll indication */}
+              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-900 to-transparent z-10 pointer-events-none md:hidden" />
+              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-900 to-transparent z-10 pointer-events-none md:hidden" />
 
-              <div className="h-6 w-px bg-white/10 mx-1"></div>
+              <div className="flex gap-2 overflow-x-auto pb-0 w-full scrollbar-thin items-center px-1">
+                <div className="flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1.5 border border-white/5 shrink-0">
+                  <span className="text-[10px] font-black uppercase text-secondary tracking-widest">Filtros</span>
+                  <div className="w-px h-3 bg-white/10" />
+                </div>
 
-              <button
-                onClick={() => setShowLaserCalc(true)}
-                className="px-3 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-purple-900/20 active:scale-95"
-              >
-                <Zap size={14} />
-                Laser DXF
-              </button>
+                {categories.map(cat => {
+                  const Icon = CATEGORY_ICONS[cat] || CATEGORY_ICONS['Default'];
+                  const isActive = activeCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => handleCategoryChange(cat)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg whitespace-nowrap text-[10px] sm:text-[11px] font-bold uppercase tracking-tight transition-all border shrink-0 ${isActive ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]' : 'bg-surface hover:bg-surface-hover text-secondary border-white/5 hover:text-primary hover:border-white/10'}`}
+                    >
+                      <Icon size={12} />
+                      {cat}
+                    </button>
+                  );
+                })}
+
+                <div className="h-4 w-px bg-white/10 mx-1 shrink-0"></div>
+
+                <button
+                  onClick={() => setShowLaserCalc(true)}
+                  className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-purple-900/20 active:scale-95 shrink-0 whitespace-nowrap border border-white/10"
+                >
+                  <Zap size={14} />
+                  Laser DXF
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -708,6 +781,19 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
                                   <span className="flex items-center gap-1"><Layers size={10} /> {item.quantity} arquivos</span>
                                   <span className="text-cyan-400">{item.labelData.totalLabels} un. totais</span>
                                 </>
+                              ) : product?.isComposite && product.composition ? (
+                                <div className="mt-1 space-y-0.5">
+                                  <span className="text-[9px] font-bold text-cyan-400 uppercase">Kit Composto:</span>
+                                  {product.composition.map((comp: any, ci: number) => {
+                                    const cName = products.find(p => p.id === comp.productId)?.name || 'Item';
+                                    return (
+                                      <div key={ci} className="flex justify-between border-b border-white/5 pb-0.5">
+                                        <span>• {cName}</span>
+                                        <span>{comp.quantity * item.quantity} un</span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
                               ) : (
                                 <span className="flex items-center gap-1"><Ruler size={10} /> {item.quantity}x {(item.width || 0).toFixed(2)}m x {(item.height || 0).toFixed(2)}m</span>
                               )}
@@ -1002,13 +1088,13 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
       {
         showAutoModal && activeProduct && (
           <AutomotiveModal
-            key={activeProduct.id}
+            // key={activeProduct.id} -- Removed to prevent unmount/remount on reference change
             isOpen={showAutoModal}
             onClose={() => setShowAutoModal(false)}
             activeProduct={activeProduct}
             onConfirm={(items: any[]) => {
               items.forEach((i: any) => {
-                addProductToCart(activeProduct, 1, i.w, i.h, undefined, activeProduct.salePrice);
+                addProductToCart(activeProduct, i.quantity, i.width, i.height, i.labelData, i.unitPrice);
               });
               setShowAutoModal(false);
             }}
@@ -1023,6 +1109,7 @@ const QuoteBuilder: React.FC<QuoteBuilderProps> = ({ finConfig, currentUser, onF
             isOpen={showLaserModal}
             onClose={() => setShowLaserModal(false)}
             activeProduct={activeProduct}
+            products={products}
             onConfirm={(data: any) => {
               // Special handling for Laser (fixed price usually)
               addProductToCart(activeProduct, 1, 1, 1, { ...data.details, finalArea: 1 }, data.total);
